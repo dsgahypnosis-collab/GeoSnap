@@ -1032,6 +1032,20 @@ async def identify_specimen(request: IdentifyRequest):
         # Get user profile for personalized identification
         profile = await get_or_create_profile()
         
+        # Check identification limit based on subscription
+        limit_check = await check_identification_limit(profile.id)
+        if not limit_check["can_identify"]:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "error": "identification_limit_reached",
+                    "message": f"You've used all {limit_check['limit']} identifications for today. Upgrade to get more!",
+                    "used": limit_check["used"],
+                    "limit": limit_check["limit"],
+                    "upgrade_options": ["explorer", "geologist_pro"]
+                }
+            )
+        
         # Run AI identification with user context
         identification, specimen_data = await identify_specimen_with_ai(
             request.image_base64,
@@ -1041,11 +1055,16 @@ async def identify_specimen(request: IdentifyRequest):
             profile
         )
         
-        # Calculate XP earned
+        # Increment usage counter
+        await increment_usage(profile.id, "identification")
+        
+        # Calculate XP earned (bonus for premium users)
+        subscription = await get_or_create_subscription(profile.id)
         base_xp = 25
         confidence_bonus = int(identification.primary_identification.confidence * 25)
         test_bonus = len(request.physical_tests) * 10
-        xp_earned = base_xp + confidence_bonus + test_bonus
+        premium_bonus = 10 if subscription.tier_id != "free" else 0
+        xp_earned = base_xp + confidence_bonus + test_bonus + premium_bonus
         
         # Create specimen object
         specimen = Specimen(

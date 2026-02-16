@@ -8,9 +8,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 import json
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,7 +30,7 @@ api_router = APIRouter(prefix="/api")
 # ==================== MODELS ====================
 
 class PhysicalTest(BaseModel):
-    test_type: str  # hardness, streak, luster, cleavage, magnetism, density
+    test_type: str
     result: str
     confidence: float = 0.8
 
@@ -37,7 +38,7 @@ class IdentificationCandidate(BaseModel):
     name: str
     scientific_name: Optional[str] = None
     confidence: float
-    rock_type: str  # igneous, sedimentary, metamorphic, mineral
+    rock_type: str
     reasons: List[str]
     excluded: bool = False
     exclusion_reason: Optional[str] = None
@@ -54,7 +55,7 @@ class SpecimenIdentification(BaseModel):
 class SpecimenData(BaseModel):
     common_name: str
     scientific_name: Optional[str] = None
-    classification: str  # igneous, sedimentary, metamorphic, mineral, gemstone
+    classification: str
     mineral_group: Optional[str] = None
     chemical_composition: Optional[str] = None
     crystal_system: Optional[str] = None
@@ -74,6 +75,7 @@ class SpecimenData(BaseModel):
     collector_value: Optional[str] = None
     market_value_range: Optional[str] = None
     interesting_facts: List[str] = []
+    deep_time_events: List[Dict[str, Any]] = []
 
 class SpecimenCreate(BaseModel):
     image_base64: str
@@ -129,9 +131,19 @@ class Achievement(BaseModel):
     xp_reward: int
     unlocked: bool = False
     unlocked_at: Optional[datetime] = None
-    requirement_type: str  # specimens_identified, tests_performed, collection_size, etc.
+    requirement_type: str
     requirement_value: int
 
+class UserPreferences(BaseModel):
+    interests: List[str] = []  # minerals, fossils, gems, etc.
+    skill_level: str = "beginner"  # beginner, intermediate, advanced
+    favorite_rock_types: List[str] = []
+    learning_goals: List[str] = []
+    preferred_detail_level: str = "standard"  # simple, standard, detailed
+    last_active_date: Optional[datetime] = None
+    session_count: int = 0
+    streak_days: int = 0
+    
 class UserProfile(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     username: str = "Explorer"
@@ -143,6 +155,10 @@ class UserProfile(BaseModel):
     collection_size: int = 0
     field_notes_count: int = 0
     achievements: List[Achievement] = []
+    preferences: UserPreferences = Field(default_factory=UserPreferences)
+    ai_insights: Dict[str, Any] = {}
+    personalized_tips: List[str] = []
+    recommended_challenges: List[Dict[str, Any]] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class IdentifyRequest(BaseModel):
@@ -158,6 +174,14 @@ class PhysicalTestGuidance(BaseModel):
     what_to_observe: str
     examples: List[Dict[str, str]]
 
+class PersonalizedContent(BaseModel):
+    daily_tip: str
+    recommended_tests: List[str]
+    learning_focus: str
+    next_challenge: Dict[str, Any]
+    geological_fact: str
+    streak_message: str
+
 # ==================== ACHIEVEMENT DEFINITIONS ====================
 
 DEFAULT_ACHIEVEMENTS = [
@@ -169,6 +193,8 @@ DEFAULT_ACHIEVEMENTS = [
     Achievement(id="collector", name="Collector", description="Add 5 specimens to collection", icon="📦", xp_reward=150, requirement_type="collection_size", requirement_value=5),
     Achievement(id="curator", name="Curator", description="Add 20 specimens to collection", icon="🏛️", xp_reward=400, requirement_type="collection_size", requirement_value=20),
     Achievement(id="field_noter", name="Field Noter", description="Create 5 field notes", icon="📝", xp_reward=100, requirement_type="field_notes_count", requirement_value=5),
+    Achievement(id="streak_starter", name="Streak Starter", description="Use GeoSnap 3 days in a row", icon="🔥", xp_reward=75, requirement_type="streak_days", requirement_value=3),
+    Achievement(id="dedicated_geologist", name="Dedicated Geologist", description="Use GeoSnap 7 days in a row", icon="⭐", xp_reward=200, requirement_type="streak_days", requirement_value=7),
 ]
 
 LEVEL_TITLES = {
@@ -184,8 +210,28 @@ LEVEL_TITLES = {
     10: "Master Geologist"
 }
 
+GEOLOGICAL_TIPS = [
+    "The Mohs hardness scale uses 10 reference minerals. Your fingernail is about 2.5, a copper coin is 3.5, and a steel knife is 6.5.",
+    "Streak color is often more diagnostic than surface color. Pyrite looks gold but streaks greenish-black.",
+    "Igneous rocks form from cooling magma. Fast cooling creates fine crystals, slow cooling creates large crystals.",
+    "Fossils are most commonly found in sedimentary rocks, which form from accumulated sediments over millions of years.",
+    "The Earth's crust is constantly recycled through the rock cycle: igneous → sedimentary → metamorphic → igneous.",
+    "Quartz is the most abundant mineral in Earth's continental crust and is extremely resistant to weathering.",
+    "Cleavage refers to how minerals break along planes of weakness. Mica has perfect cleavage in one direction.",
+    "Volcanic glass like obsidian forms when lava cools so quickly that crystals don't have time to form.",
+    "Metamorphic rocks tell stories of intense heat and pressure. Marble was once limestone, slate was once shale.",
+    "Geodes form when mineral-rich water seeps into rock cavities and slowly deposits crystals over millions of years.",
+]
+
+CHALLENGES = [
+    {"id": "hardness_test", "name": "Hardness Hunter", "description": "Perform 3 hardness tests on different specimens", "xp": 50, "type": "tests_performed", "target": 3},
+    {"id": "igneous_finder", "name": "Igneous Explorer", "description": "Identify an igneous rock specimen", "xp": 40, "type": "rock_type", "target": "igneous"},
+    {"id": "crystal_quest", "name": "Crystal Quest", "description": "Find and identify a crystalline mineral", "xp": 60, "type": "classification", "target": "mineral"},
+    {"id": "field_master", "name": "Field Master", "description": "Create a field note with location data", "xp": 35, "type": "field_note", "target": 1},
+    {"id": "collector_start", "name": "Start Your Collection", "description": "Add your first specimen to the collection", "xp": 25, "type": "collection", "target": 1},
+]
+
 def calculate_level(xp: int) -> tuple[int, str]:
-    """Calculate level based on XP"""
     level = 1
     xp_thresholds = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500]
     for i, threshold in enumerate(xp_thresholds):
@@ -193,10 +239,122 @@ def calculate_level(xp: int) -> tuple[int, str]:
             level = i + 1
     return level, LEVEL_TITLES.get(level, "Master Geologist")
 
+# ==================== AI PERSONALIZATION ENGINE ====================
+
+async def generate_personalized_content(profile: 'UserProfile') -> PersonalizedContent:
+    """Generate AI-personalized content based on user's history and preferences"""
+    
+    # Calculate streak
+    streak_messages = [
+        "Start your geological journey today!",
+        f"🔥 {profile.preferences.streak_days} day streak! Keep exploring!",
+        f"⭐ Amazing {profile.preferences.streak_days} day streak! You're becoming a true geologist!",
+    ]
+    streak_msg = streak_messages[0] if profile.preferences.streak_days == 0 else (
+        streak_messages[2] if profile.preferences.streak_days >= 7 else streak_messages[1]
+    )
+    
+    # Select tip based on user level and interests
+    tip_index = (profile.specimens_identified + profile.level) % len(GEOLOGICAL_TIPS)
+    daily_tip = GEOLOGICAL_TIPS[tip_index]
+    
+    # Recommend tests based on what user hasn't done much
+    all_tests = ["hardness", "streak", "luster", "cleavage", "magnetism", "density"]
+    recommended_tests = random.sample(all_tests, min(3, len(all_tests)))
+    
+    # Learning focus based on level
+    learning_focuses = {
+        1: "Basic mineral identification and simple tests",
+        2: "Understanding rock types and their origins",
+        3: "Crystal systems and optical properties",
+        4: "Geological formations and tectonic processes",
+        5: "Advanced identification techniques",
+    }
+    learning_focus = learning_focuses.get(min(profile.level, 5), "Mastering geological expertise")
+    
+    # Select appropriate challenge
+    challenges = CHALLENGES.copy()
+    next_challenge = random.choice(challenges)
+    
+    # Geological fact of the day
+    facts = [
+        "Earth is approximately 4.5 billion years old.",
+        "The deepest mine in the world reaches 4 km below the surface.",
+        "Diamonds form about 150-200 km below Earth's surface.",
+        "The largest crystal ever found was 12 meters long (selenite in Mexico).",
+        "Over 5,000 mineral species have been identified on Earth.",
+    ]
+    geological_fact = facts[datetime.now().day % len(facts)]
+    
+    return PersonalizedContent(
+        daily_tip=daily_tip,
+        recommended_tests=recommended_tests,
+        learning_focus=learning_focus,
+        next_challenge=next_challenge,
+        geological_fact=geological_fact,
+        streak_message=streak_msg
+    )
+
+async def update_user_preferences_from_activity(profile_id: str, activity_type: str, activity_data: Dict[str, Any]):
+    """AI learns from user activity to personalize experience"""
+    profile = await db.user_profiles.find_one({"id": profile_id})
+    if not profile:
+        return
+    
+    preferences = profile.get("preferences", {})
+    interests = preferences.get("interests", [])
+    favorite_rock_types = preferences.get("favorite_rock_types", [])
+    
+    if activity_type == "identification":
+        rock_type = activity_data.get("rock_type", "")
+        if rock_type and rock_type not in favorite_rock_types:
+            favorite_rock_types.append(rock_type)
+            favorite_rock_types = favorite_rock_types[-10:]  # Keep last 10
+        
+        classification = activity_data.get("classification", "")
+        if classification and classification not in interests:
+            interests.append(classification)
+            interests = interests[-10:]
+    
+    # Update skill level based on XP
+    total_xp = profile.get("total_xp", 0)
+    if total_xp >= 1000:
+        skill_level = "advanced"
+    elif total_xp >= 300:
+        skill_level = "intermediate"
+    else:
+        skill_level = "beginner"
+    
+    # Update streak
+    last_active = preferences.get("last_active_date")
+    today = datetime.utcnow().date()
+    streak_days = preferences.get("streak_days", 0)
+    
+    if last_active:
+        last_date = datetime.fromisoformat(str(last_active)).date() if isinstance(last_active, str) else last_active.date()
+        if (today - last_date).days == 1:
+            streak_days += 1
+        elif (today - last_date).days > 1:
+            streak_days = 1
+    else:
+        streak_days = 1
+    
+    await db.user_profiles.update_one(
+        {"id": profile_id},
+        {"$set": {
+            "preferences.interests": interests,
+            "preferences.favorite_rock_types": favorite_rock_types,
+            "preferences.skill_level": skill_level,
+            "preferences.last_active_date": datetime.utcnow(),
+            "preferences.session_count": preferences.get("session_count", 0) + 1,
+            "preferences.streak_days": streak_days
+        }}
+    )
+
 # ==================== AI IDENTIFICATION ====================
 
-async def identify_specimen_with_ai(image_base64: str, latitude: Optional[float], longitude: Optional[float], physical_tests: List[PhysicalTest]) -> tuple[SpecimenIdentification, SpecimenData]:
-    """Use OpenAI GPT-4o to identify the specimen"""
+async def identify_specimen_with_ai(image_base64: str, latitude: Optional[float], longitude: Optional[float], physical_tests: List[PhysicalTest], user_profile: Optional[UserProfile] = None) -> tuple[SpecimenIdentification, SpecimenData]:
+    """Use OpenAI GPT-4o to identify the specimen with personalized context"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
@@ -214,7 +372,19 @@ async def identify_specimen_with_ai(image_base64: str, latitude: Optional[float]
         # Build location context
         location_context = ""
         if latitude and longitude:
-            location_context = f"\n\nLocation: {latitude}, {longitude}"
+            location_context = f"\n\nLocation coordinates: {latitude}, {longitude}"
+        
+        # Build user context for personalization
+        user_context = ""
+        if user_profile:
+            user_context = f"""
+\n\nUser Context (for personalized explanation):
+- Skill Level: {user_profile.preferences.skill_level}
+- Specimens Identified: {user_profile.specimens_identified}
+- Interests: {', '.join(user_profile.preferences.interests) if user_profile.preferences.interests else 'General geology'}
+- Level: {user_profile.level} ({user_profile.title})
+
+Adjust your explanation depth accordingly - be more detailed for advanced users, use simpler terms for beginners."""
         
         system_message = """You are Strata, an expert AI geological mentor embedded in GeoSnap - a cinematic geological intelligence platform. 
 
@@ -227,6 +397,8 @@ CRITICAL RULES:
 4. Consider geological plausibility based on location
 5. Use physical test results to refine identification
 6. Explain what features led to your conclusion
+7. Include fascinating facts that make the user want to learn more
+8. Add deep time context - when and how this formed
 
 You must respond in valid JSON format with this exact structure:
 {
@@ -235,7 +407,7 @@ You must respond in valid JSON format with this exact structure:
         "scientific_name": "Scientific name if applicable",
         "confidence": 0.85,
         "rock_type": "igneous|sedimentary|metamorphic|mineral|gemstone",
-        "reasons": ["Reason 1", "Reason 2"]
+        "reasons": ["Reason 1", "Reason 2", "Reason 3"]
     },
     "secondary_candidates": [
         {
@@ -247,8 +419,8 @@ You must respond in valid JSON format with this exact structure:
             "exclusion_reason": null
         }
     ],
-    "evidence_used": ["Visual feature 1", "Visual feature 2"],
-    "uncertainty_notes": "Any caveats or additional info needed",
+    "evidence_used": ["Visual feature 1", "Visual feature 2", "Visual feature 3"],
+    "uncertainty_notes": "Any caveats or additional tests that would help",
     "specimen_data": {
         "common_name": "Name",
         "scientific_name": "Scientific name",
@@ -256,22 +428,27 @@ You must respond in valid JSON format with this exact structure:
         "mineral_group": "Group if applicable",
         "chemical_composition": "Chemical formula",
         "crystal_system": "System if crystalline",
-        "hardness": "Mohs scale value",
-        "density": "g/cm³",
+        "hardness": "Mohs scale value or range",
+        "density": "g/cm³ value or range",
         "luster": "Type of luster",
         "cleavage": "Cleavage description",
         "fracture": "Fracture type",
         "streak": "Streak color",
         "optical_properties": "Any notable optical properties",
-        "toxicity_warning": "Safety warnings if any",
-        "formation_process": "How it forms",
-        "geological_era": "When it typically formed",
-        "plate_tectonic_context": "Tectonic setting",
-        "environmental_conditions": "Formation conditions",
-        "scientific_value": "Scientific importance",
-        "collector_value": "Collectibility",
-        "market_value_range": "Approximate value range",
-        "interesting_facts": ["Fact 1", "Fact 2", "Fact 3"]
+        "toxicity_warning": "Safety warnings if any, null if safe",
+        "formation_process": "Detailed explanation of how it forms",
+        "geological_era": "When it typically formed (e.g., 'Precambrian, 2.5 billion years ago')",
+        "plate_tectonic_context": "Tectonic setting where this forms",
+        "environmental_conditions": "Temperature, pressure, chemical conditions",
+        "scientific_value": "Why scientists find this interesting",
+        "collector_value": "Collectibility and appeal",
+        "market_value_range": "Approximate value range if applicable",
+        "interesting_facts": ["Fascinating fact 1", "Fascinating fact 2", "Fascinating fact 3"],
+        "deep_time_events": [
+            {"years_ago": 4500000000, "event": "Earth forms from solar nebula"},
+            {"years_ago": 2500000000, "event": "Great Oxidation Event"},
+            {"years_ago": 500000000, "event": "Relevant geological event"}
+        ]
     }
 }"""
         
@@ -279,15 +456,18 @@ You must respond in valid JSON format with this exact structure:
 
 {test_context}
 {location_context}
+{user_context}
 
 Examine carefully:
 - Color, luster, and surface texture
-- Crystal habit or grain structure
+- Crystal habit or grain structure  
 - Visible cleavage or fracture patterns
-- Any inclusions or weathering
-- Overall morphology
+- Any inclusions, banding, or weathering
+- Overall morphology and form
 
-Provide your identification with honest confidence levels. If uncertain, list multiple candidates."""
+Provide your identification with honest confidence levels. If uncertain, list multiple candidates and explain what additional tests would help.
+
+Make your response engaging - include fascinating facts that will make the user want to learn more about geology!"""
         
         chat = LlmChat(
             api_key=api_key,
@@ -295,7 +475,6 @@ Provide your identification with honest confidence levels. If uncertain, list mu
             system_message=system_message
         ).with_model("openai", "gpt-4o")
         
-        # Create image content
         image_content = ImageContent(image_base64=image_base64)
         
         user_message = UserMessage(
@@ -307,7 +486,6 @@ Provide your identification with honest confidence levels. If uncertain, list mu
         
         # Parse the JSON response
         try:
-            # Clean the response if it has markdown code blocks
             response_text = response.strip()
             if response_text.startswith("```json"):
                 response_text = response_text[7:]
@@ -318,7 +496,6 @@ Provide your identification with honest confidence levels. If uncertain, list mu
             
             result = json.loads(response_text.strip())
             
-            # Build identification object
             primary = IdentificationCandidate(**result["primary_identification"])
             secondary = [IdentificationCandidate(**c) for c in result.get("secondary_candidates", [])]
             
@@ -330,7 +507,6 @@ Provide your identification with honest confidence levels. If uncertain, list mu
                 physical_tests_performed=physical_tests
             )
             
-            # Build specimen data
             spec_data = result.get("specimen_data", {})
             specimen_data = SpecimenData(
                 common_name=spec_data.get("common_name", primary.name),
@@ -354,7 +530,8 @@ Provide your identification with honest confidence levels. If uncertain, list mu
                 scientific_value=spec_data.get("scientific_value"),
                 collector_value=spec_data.get("collector_value"),
                 market_value_range=spec_data.get("market_value_range"),
-                interesting_facts=spec_data.get("interesting_facts", [])
+                interesting_facts=spec_data.get("interesting_facts", []),
+                deep_time_events=spec_data.get("deep_time_events", [])
             )
             
             return identification, specimen_data
@@ -378,6 +555,21 @@ async def root():
 async def health_check():
     return {"status": "healthy", "service": "geosnap-api"}
 
+# ---------- Personalization ----------
+
+@api_router.get("/personalized-content", response_model=PersonalizedContent)
+async def get_personalized_content():
+    """Get AI-personalized content for the user"""
+    profile = await get_or_create_profile()
+    return await generate_personalized_content(profile)
+
+@api_router.post("/track-activity")
+async def track_activity(activity_type: str, activity_data: Dict[str, Any] = {}):
+    """Track user activity for AI personalization"""
+    profile = await get_or_create_profile()
+    await update_user_preferences_from_activity(profile.id, activity_type, activity_data)
+    return {"message": "Activity tracked", "activity_type": activity_type}
+
 # ---------- Identification ----------
 
 @api_router.post("/identify", response_model=Specimen)
@@ -388,15 +580,19 @@ async def identify_specimen(request: IdentifyRequest):
     ACT III: REVELATION - The answer resolves
     """
     try:
-        # Run AI identification
+        # Get user profile for personalized identification
+        profile = await get_or_create_profile()
+        
+        # Run AI identification with user context
         identification, specimen_data = await identify_specimen_with_ai(
             request.image_base64,
             request.latitude,
             request.longitude,
-            request.physical_tests
+            request.physical_tests,
+            profile
         )
         
-        # Calculate XP earned (based on confidence and tests performed)
+        # Calculate XP earned
         base_xp = 25
         confidence_bonus = int(identification.primary_identification.confidence * 25)
         test_bonus = len(request.physical_tests) * 10
@@ -416,10 +612,21 @@ async def identify_specimen(request: IdentifyRequest):
         # Save to database
         await db.specimens.insert_one(specimen.dict())
         
-        # Update user profile
+        # Update user profile stats and learn from activity
         await update_user_stats("specimens_identified", 1, xp_earned)
         if request.physical_tests:
             await update_user_stats("tests_performed", len(request.physical_tests), 0)
+        
+        # Update AI personalization based on this identification
+        await update_user_preferences_from_activity(
+            profile.id, 
+            "identification", 
+            {
+                "rock_type": identification.primary_identification.rock_type,
+                "classification": specimen_data.classification,
+                "name": specimen_data.common_name
+            }
+        )
         
         return specimen
         
@@ -553,8 +760,11 @@ async def add_to_collection(specimen_id: str):
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Specimen not found")
     
-    # Update user stats
     await update_user_stats("collection_size", 1, 15)
+    
+    # Track for personalization
+    profile = await get_or_create_profile()
+    await update_user_preferences_from_activity(profile.id, "collection_add", {})
     
     return {"message": "Added to collection", "specimen_id": specimen_id}
 
@@ -606,6 +816,11 @@ async def create_field_note(note: FieldNoteCreate):
     field_note = FieldNote(**note.dict())
     await db.field_notes.insert_one(field_note.dict())
     await update_user_stats("field_notes_count", 1, 20)
+    
+    # Track for personalization
+    profile = await get_or_create_profile()
+    await update_user_preferences_from_activity(profile.id, "field_note", {"tags": note.tags})
+    
     return field_note
 
 @api_router.get("/field-notes", response_model=List[FieldNote])
@@ -652,7 +867,10 @@ async def get_or_create_profile() -> UserProfile:
     """Get or create user profile"""
     profile = await db.user_profiles.find_one({})
     if not profile:
-        new_profile = UserProfile(achievements=DEFAULT_ACHIEVEMENTS)
+        new_profile = UserProfile(
+            achievements=DEFAULT_ACHIEVEMENTS,
+            preferences=UserPreferences()
+        )
         await db.user_profiles.insert_one(new_profile.dict())
         return new_profile
     return UserProfile(**profile)
@@ -661,7 +879,6 @@ async def update_user_stats(stat_type: str, increment: int, xp_bonus: int = 0):
     """Update user statistics and check achievements"""
     profile = await get_or_create_profile()
     
-    # Update the stat
     current_value = getattr(profile, stat_type, 0) + increment
     new_xp = profile.total_xp + xp_bonus
     new_level, new_title = calculate_level(new_xp)
@@ -684,6 +901,16 @@ async def update_user_stats(stat_type: str, increment: int, xp_bonus: int = 0):
                 update_data["total_xp"] = update_data.get("total_xp", new_xp) + achievement.xp_reward
                 newly_unlocked.append(achievement)
     
+    # Also check streak achievements
+    streak_days = profile.preferences.streak_days
+    for i, achievement in enumerate(achievements):
+        if not achievement.unlocked and achievement.requirement_type == "streak_days":
+            if streak_days >= achievement.requirement_value:
+                achievements[i].unlocked = True
+                achievements[i].unlocked_at = datetime.utcnow()
+                update_data["total_xp"] = update_data.get("total_xp", new_xp) + achievement.xp_reward
+                newly_unlocked.append(achievement)
+    
     update_data["achievements"] = [a.dict() for a in achievements]
     
     await db.user_profiles.update_one(
@@ -696,6 +923,12 @@ async def update_user_stats(stat_type: str, increment: int, xp_bonus: int = 0):
 @api_router.get("/profile", response_model=UserProfile)
 async def get_profile():
     """Get user profile with stats and achievements"""
+    profile = await get_or_create_profile()
+    
+    # Update last active and streak when profile is fetched
+    await update_user_preferences_from_activity(profile.id, "session_start", {})
+    
+    # Refresh profile after update
     return await get_or_create_profile()
 
 @api_router.put("/profile/username")
@@ -713,24 +946,27 @@ async def get_leaderboard():
     """Get gamification leaderboard stats"""
     profile = await get_or_create_profile()
     
-    # Calculate next level XP
     xp_thresholds = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500]
     current_threshold = xp_thresholds[profile.level - 1] if profile.level <= 10 else xp_thresholds[-1]
     next_threshold = xp_thresholds[profile.level] if profile.level < 10 else xp_thresholds[-1] + 1000
+    
+    # Get personalized content
+    personalized = await generate_personalized_content(profile)
     
     return {
         "profile": profile,
         "xp_to_next_level": next_threshold - profile.total_xp,
         "level_progress": (profile.total_xp - current_threshold) / (next_threshold - current_threshold) if next_threshold > current_threshold else 1.0,
         "unlocked_achievements": len([a for a in profile.achievements if a.unlocked]),
-        "total_achievements": len(profile.achievements)
+        "total_achievements": len(profile.achievements),
+        "personalized": personalized.dict()
     }
 
 # ---------- Strata AI Mentor ----------
 
 @api_router.post("/strata/ask")
 async def ask_strata(question: str, context: Optional[str] = None):
-    """Ask Strata, the AI geological mentor"""
+    """Ask Strata, the AI geological mentor - with personalized responses"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
@@ -738,14 +974,33 @@ async def ask_strata(question: str, context: Optional[str] = None):
         if not api_key:
             raise ValueError("EMERGENT_LLM_KEY not found")
         
-        system_message = """You are Strata, the AI geological mentor embedded in GeoSnap.
+        # Get user profile for personalization
+        profile = await get_or_create_profile()
+        
+        skill_context = f"""
+User Profile:
+- Level: {profile.level} ({profile.title})
+- Skill: {profile.preferences.skill_level}
+- Specimens Identified: {profile.specimens_identified}
+- Interests: {', '.join(profile.preferences.interests) if profile.preferences.interests else 'General geology'}
+
+Tailor your response to their skill level:
+- Beginner: Use simple explanations, analogies, and avoid jargon
+- Intermediate: Include technical terms with brief explanations
+- Advanced: Speak peer-to-peer with full scientific vocabulary
+"""
+        
+        system_message = f"""You are Strata, the AI geological mentor embedded in GeoSnap - a cinematic geological intelligence platform.
+
+{skill_context}
 
 Your personality:
 - Professional, calm, intelligent
 - Never hallucinate data - say "I don't know" when uncertain
 - Prefer clarity over cleverness
-- Adapt explanation depth to the question complexity
+- Adapt explanation depth to the user's skill level
 - Maintain a sense of wonder about geology
+- Encourage curiosity and further exploration
 
 Your knowledge covers:
 - Rock and mineral identification
@@ -754,8 +1009,12 @@ Your knowledge covers:
 - Tectonic and plate theory
 - Deep time and Earth history
 - Practical field geology
+- Crystal systems and mineralogy
+- Fossils and paleontology
 
-Keep responses concise but informative. Use geological terminology but explain it when needed."""
+End responses with a thought-provoking question or fascinating related fact to keep the user engaged.
+
+Keep responses conversational but informative. Use geological terminology appropriately for the user's level."""
         
         chat = LlmChat(
             api_key=api_key,
@@ -768,6 +1027,9 @@ Keep responses concise but informative. Use geological terminology but explain i
             prompt = f"Context: {context}\n\nQuestion: {question}"
         
         response = await chat.send_message(UserMessage(text=prompt))
+        
+        # Track this interaction for personalization
+        await update_user_preferences_from_activity(profile.id, "strata_chat", {"question": question})
         
         return {"response": response, "mentor": "Strata"}
         

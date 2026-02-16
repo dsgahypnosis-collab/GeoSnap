@@ -723,6 +723,302 @@ async def track_activity(activity_type: str, activity_data: Dict[str, Any] = {})
     await update_user_preferences_from_activity(profile.id, activity_type, activity_data)
     return {"message": "Activity tracked", "activity_type": activity_type}
 
+# ---------- Subscription & Monetization ----------
+
+async def get_or_create_subscription(user_id: str) -> UserSubscription:
+    """Get or create user subscription (defaults to free tier)"""
+    sub = await db.subscriptions.find_one({"user_id": user_id})
+    if not sub:
+        new_sub = UserSubscription(user_id=user_id, tier_id="free")
+        await db.subscriptions.insert_one(new_sub.dict())
+        return new_sub
+    return UserSubscription(**sub)
+
+async def get_daily_usage(user_id: str) -> UsageTracking:
+    """Get or create daily usage tracking"""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    usage = await db.usage_tracking.find_one({"user_id": user_id, "date": today})
+    if not usage:
+        new_usage = UsageTracking(user_id=user_id, date=today)
+        await db.usage_tracking.insert_one(new_usage.__dict__)
+        return new_usage
+    return UsageTracking(**usage)
+
+async def check_feature_access(user_id: str, feature: str) -> dict:
+    """Check if user has access to a feature based on subscription"""
+    subscription = await get_or_create_subscription(user_id)
+    tier = SUBSCRIPTION_TIERS.get(subscription.tier_id, SUBSCRIPTION_TIERS["free"])
+    
+    # Check trial status
+    is_trial = subscription.status == "trial"
+    trial_days_left = 0
+    if is_trial and subscription.expires_at:
+        trial_days_left = (subscription.expires_at - datetime.utcnow()).days
+    
+    # Feature access checks
+    access_map = {
+        "identification": tier.identifications_per_day != 0,
+        "deep_time": tier.has_deep_time,
+        "offline": tier.has_offline_mode,
+        "export": tier.has_export,
+        "priority_ai": tier.has_priority_ai,
+        "advanced_tests": tier.has_advanced_tests,
+        "specialist_packs": tier.has_specialist_packs,
+    }
+    
+    has_access = access_map.get(feature, False)
+    
+    return {
+        "has_access": has_access or is_trial,
+        "tier_id": subscription.tier_id,
+        "tier_name": tier.name,
+        "is_trial": is_trial,
+        "trial_days_left": trial_days_left,
+        "upgrade_required": not has_access and not is_trial
+    }
+
+async def check_identification_limit(user_id: str) -> dict:
+    """Check if user has remaining identifications for today"""
+    subscription = await get_or_create_subscription(user_id)
+    tier = SUBSCRIPTION_TIERS.get(subscription.tier_id, SUBSCRIPTION_TIERS["free"])
+    usage = await get_daily_usage(user_id)
+    
+    # Unlimited for pro users
+    if tier.identifications_per_day == -1:
+        return {
+            "can_identify": True,
+            "remaining": -1,
+            "limit": -1,
+            "used": usage.identifications_used,
+            "is_unlimited": True
+        }
+    
+    remaining = tier.identifications_per_day - usage.identifications_used
+    
+    return {
+        "can_identify": remaining > 0,
+        "remaining": max(0, remaining),
+        "limit": tier.identifications_per_day,
+        "used": usage.identifications_used,
+        "is_unlimited": False
+    }
+
+async def increment_usage(user_id: str, usage_type: str):
+    """Increment daily usage counter"""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    field = f"{usage_type}_used" if not usage_type.endswith("_used") else usage_type
+    await db.usage_tracking.update_one(
+        {"user_id": user_id, "date": today},
+        {"$inc": {field.replace("_used", "s_used"): 1}},
+        upsert=True
+    )
+
+@api_router.get("/subscription/tiers")
+async def get_subscription_tiers():
+    """Get all available subscription tiers"""
+    return {
+        "tiers": [tier.dict() for tier in SUBSCRIPTION_TIERS.values()],
+        "specialist_packs": list(SPECIALIST_PACKS.values())
+    }
+
+@api_router.get("/subscription/status")
+async def get_subscription_status():
+    """Get current user's subscription status"""
+    profile = await get_or_create_profile()
+    subscription = await get_or_create_subscription(profile.id)
+    tier = SUBSCRIPTION_TIERS.get(subscription.tier_id, SUBSCRIPTION_TIERS["free"])
+    usage = await get_daily_usage(profile.id)
+    
+    # Calculate remaining identifications
+    if tier.identifications_per_day == -1:
+        remaining_ids = -1
+        is_unlimited = True
+    else:
+        remaining_ids = max(0, tier.identifications_per_day - usage.identifications_used)
+        is_unlimited = False
+    
+    # Get purchased specialist packs
+    purchased_packs = await db.purchases.find({
+        "user_id": profile.id,
+        "item_type": "specialist_pack",
+        "status": "completed"
+    }).to_list(100)
+    purchased_pack_ids = [p["item_id"] for p in purchased_packs]
+    
+    return {
+        "subscription": subscription.dict(),
+        "tier": tier.dict(),
+        "usage": {
+            "identifications_today": usage.identifications_used,
+            "remaining_identifications": remaining_ids,
+            "is_unlimited": is_unlimited,
+            "strata_queries_today": usage.strata_queries,
+            "exports_today": usage.exports_used
+        },
+        "purchased_packs": purchased_pack_ids,
+        "features": {
+            "has_deep_time": tier.has_deep_time,
+            "has_offline": tier.has_offline_mode,
+            "has_export": tier.has_export,
+            "has_priority_ai": tier.has_priority_ai,
+            "has_advanced_tests": tier.has_advanced_tests,
+            "has_specialist_packs": tier.has_specialist_packs
+        }
+    }
+
+@api_router.post("/subscription/start-trial")
+async def start_free_trial():
+    """Start a 7-day free trial of Explorer tier"""
+    profile = await get_or_create_profile()
+    subscription = await get_or_create_subscription(profile.id)
+    
+    if subscription.trial_used:
+        raise HTTPException(status_code=400, detail="Free trial already used")
+    
+    # Update to trial
+    trial_expires = datetime.utcnow() + timedelta(days=7)
+    await db.subscriptions.update_one(
+        {"user_id": profile.id},
+        {"$set": {
+            "tier_id": "explorer",
+            "status": "trial",
+            "expires_at": trial_expires,
+            "trial_used": True
+        }}
+    )
+    
+    return {
+        "message": "Free trial started!",
+        "tier": "explorer",
+        "expires_at": trial_expires.isoformat(),
+        "trial_days": 7
+    }
+
+@api_router.post("/subscription/subscribe")
+async def subscribe(tier_id: str, is_yearly: bool = False, payment_token: Optional[str] = None):
+    """Subscribe to a tier (simulated - would integrate with Stripe/Apple/Google)"""
+    profile = await get_or_create_profile()
+    
+    if tier_id not in SUBSCRIPTION_TIERS:
+        raise HTTPException(status_code=400, detail="Invalid subscription tier")
+    
+    tier = SUBSCRIPTION_TIERS[tier_id]
+    
+    if tier_id == "free":
+        raise HTTPException(status_code=400, detail="Cannot subscribe to free tier")
+    
+    # Calculate price and expiry
+    price = tier.price_yearly if is_yearly else tier.price_monthly
+    expires_at = datetime.utcnow() + timedelta(days=365 if is_yearly else 30)
+    
+    # In production, you would:
+    # 1. Validate payment_token with Stripe/Apple/Google
+    # 2. Process the payment
+    # 3. Handle webhooks for subscription events
+    
+    # For now, simulate successful subscription
+    await db.subscriptions.update_one(
+        {"user_id": profile.id},
+        {"$set": {
+            "tier_id": tier_id,
+            "status": "active",
+            "expires_at": expires_at,
+            "is_yearly": is_yearly,
+            "auto_renew": True
+        }}
+    )
+    
+    # Record purchase
+    purchase = PurchaseRecord(
+        user_id=profile.id,
+        item_type="subscription",
+        item_id=tier_id,
+        amount=price,
+        receipt_data=payment_token
+    )
+    await db.purchases.insert_one(purchase.dict())
+    
+    return {
+        "message": f"Successfully subscribed to {tier.name}!",
+        "tier": tier.dict(),
+        "expires_at": expires_at.isoformat(),
+        "amount_charged": price,
+        "is_yearly": is_yearly
+    }
+
+@api_router.post("/subscription/purchase-pack")
+async def purchase_specialist_pack(pack_id: str, payment_token: Optional[str] = None):
+    """Purchase a specialist pack (one-time)"""
+    profile = await get_or_create_profile()
+    
+    if pack_id not in SPECIALIST_PACKS:
+        raise HTTPException(status_code=400, detail="Invalid specialist pack")
+    
+    pack = SPECIALIST_PACKS[pack_id]
+    
+    # Check if already purchased
+    existing = await db.purchases.find_one({
+        "user_id": profile.id,
+        "item_type": "specialist_pack",
+        "item_id": pack_id,
+        "status": "completed"
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Pack already purchased")
+    
+    # In production, validate payment here
+    
+    # Record purchase
+    purchase = PurchaseRecord(
+        user_id=profile.id,
+        item_type="specialist_pack",
+        item_id=pack_id,
+        amount=pack["price"],
+        receipt_data=payment_token
+    )
+    await db.purchases.insert_one(purchase.dict())
+    
+    return {
+        "message": f"Successfully purchased {pack['name']}!",
+        "pack": pack,
+        "amount_charged": pack["price"]
+    }
+
+@api_router.post("/subscription/cancel")
+async def cancel_subscription():
+    """Cancel subscription (will not renew)"""
+    profile = await get_or_create_profile()
+    
+    await db.subscriptions.update_one(
+        {"user_id": profile.id},
+        {"$set": {"auto_renew": False, "status": "cancelled"}}
+    )
+    
+    subscription = await get_or_create_subscription(profile.id)
+    
+    return {
+        "message": "Subscription cancelled. You'll retain access until the end of your billing period.",
+        "expires_at": subscription.expires_at.isoformat() if subscription.expires_at else None
+    }
+
+@api_router.post("/subscription/restore")
+async def restore_purchases():
+    """Restore purchases (for app reinstall - would verify with app stores)"""
+    profile = await get_or_create_profile()
+    
+    # Get all purchases
+    purchases = await db.purchases.find({"user_id": profile.id}).to_list(100)
+    
+    # Get active subscription
+    subscription = await get_or_create_subscription(profile.id)
+    
+    return {
+        "subscription": subscription.dict(),
+        "purchases": [p for p in purchases],
+        "message": "Purchases restored successfully"
+    }
+
 # ---------- Identification ----------
 
 @api_router.post("/identify", response_model=Specimen)

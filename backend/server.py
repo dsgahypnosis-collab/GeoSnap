@@ -351,17 +351,26 @@ DEFAULT_ACHIEVEMENTS = [
 ]
 
 LEVEL_TITLES = {
-    1: "Novice Geologist",
-    2: "Rock Enthusiast",
-    3: "Mineral Apprentice",
-    4: "Stone Scholar",
-    5: "Crystal Seeker",
-    6: "Formation Expert",
-    7: "Stratum Master",
-    8: "Geological Sage",
-    9: "Earth Historian",
-    10: "Master Geologist"
+    1: "Field Scout",
+    2: "Rock Wanderer", 
+    3: "Relic Seeker",
+    4: "Stratum Reader",
+    5: "Rift Walker",
+    6: "Crystal Sage",
+    7: "Deep Time Navigator",
+    8: "Tectonic Whisperer",
+    9: "Planetary Archivist",
+    10: "Cosmic Geologist"
 }
+
+# Expedition Quests - Adventure-framed challenges
+EXPEDITION_QUESTS = [
+    {"id": "ancient_water", "name": "Echoes of Ancient Seas", "description": "Find evidence of water that flowed millions of years ago", "xp": 100, "type": "rock_type", "target": "sedimentary"},
+    {"id": "fire_survivor", "name": "Born from Fire", "description": "Identify a rock that survived volcanic fury", "xp": 80, "type": "rock_type", "target": "igneous"},
+    {"id": "time_traveler", "name": "500 Million Year Journey", "description": "Discover a mineral older than complex life", "xp": 150, "type": "specimens_identified", "target": 5},
+    {"id": "crystal_hunter", "name": "Geometry of the Deep", "description": "Find a perfectly formed crystal specimen", "xp": 75, "type": "rock_type", "target": "mineral"},
+    {"id": "metamorphic_tale", "name": "Transformed by Pressure", "description": "Identify a rock that was once something else", "xp": 90, "type": "rock_type", "target": "metamorphic"},
+]
 
 GEOLOGICAL_TIPS = [
     "The Mohs hardness scale uses 10 reference minerals. Your fingernail is about 2.5, a copper coin is 3.5, and a steel knife is 6.5.",

@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../src/utils/theme';
 import { useAppStore } from '../src/stores/appStore';
@@ -19,7 +18,7 @@ import { ObsidianButton } from '../src/components';
 const { width, height } = Dimensions.get('window');
 
 export default function IntroScreen() {
-  const { showIntro, setShowIntro, profile } = useAppStore();
+  const { profile } = useAppStore();
   const [phase, setPhase] = useState(0);
   
   // Animated values for cinematic sequence
@@ -28,6 +27,7 @@ export default function IntroScreen() {
   const lightPulse = useRef(new Animated.Value(0)).current;
   const textReveal = useRef(new Animated.Value(0)).current;
   const buttonReveal = useRef(new Animated.Value(0)).current;
+  const crystalRotate = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Cinematic opening sequence
@@ -68,13 +68,26 @@ export default function IntroScreen() {
       }),
     ]);
 
+    // Crystal rotation animation
+    Animated.loop(
+      Animated.timing(crystalRotate, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    ).start();
+
     sequence.start();
   }, []);
 
   const handleEnter = () => {
-    setShowIntro(false);
     router.replace('/(tabs)');
   };
+
+  const spin = crystalRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.container}>
@@ -83,7 +96,10 @@ export default function IntroScreen() {
         style={[
           styles.lightGlow,
           {
-            opacity: lightPulse,
+            opacity: lightPulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.15],
+            }),
             transform: [
               {
                 scale: lightPulse.interpolate({
@@ -92,6 +108,19 @@ export default function IntroScreen() {
                 }),
               },
             ],
+          },
+        ]}
+      />
+
+      {/* Secondary glow */}
+      <Animated.View
+        style={[
+          styles.secondaryGlow,
+          {
+            opacity: lightPulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.1],
+            }),
           },
         ]}
       />
@@ -106,17 +135,17 @@ export default function IntroScreen() {
           },
         ]}
       >
-        {/* Crystal icon - the specimen */}
-        <View style={styles.iconContainer}>
-          <LinearGradient
-            colors={[colors.magmaAmber, '#D45A27', colors.specimenGold]}
-            style={styles.iconGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+        {/* Crystal icon - the specimen with rotation */}
+        <Animated.View 
+          style={[
+            styles.iconContainer,
+            { transform: [{ rotate: spin }] }
+          ]}
+        >
+          <View style={styles.iconGradient}>
             <Ionicons name="diamond" size={48} color={colors.obsidian} />
-          </LinearGradient>
-        </View>
+          </View>
+        </Animated.View>
 
         {/* Logo text - carved, not printed */}
         <Animated.View style={{ opacity: textReveal }}>
@@ -184,6 +213,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.obsidian,
   },
   lightGlow: {
     position: 'absolute',
@@ -191,8 +221,15 @@ const styles = StyleSheet.create({
     height: width * 1.5,
     borderRadius: width,
     backgroundColor: colors.magmaAmber,
-    opacity: 0.05,
-    top: height * 0.2,
+    top: height * 0.15,
+  },
+  secondaryGlow: {
+    position: 'absolute',
+    width: width,
+    height: width,
+    borderRadius: width / 2,
+    backgroundColor: colors.amethystPurple,
+    bottom: height * 0.2,
   },
   content: {
     alignItems: 'center',
@@ -207,6 +244,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.magmaAmber,
     shadowColor: colors.magmaAmber,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
@@ -214,13 +252,15 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   title: {
-    ...typography.hero,
+    fontSize: 42,
+    fontWeight: '700',
+    letterSpacing: 8,
     color: colors.textPrimary,
     textAlign: 'center',
-    letterSpacing: 8,
   },
   subtitle: {
-    ...typography.body,
+    fontSize: 16,
+    fontWeight: '400',
     color: colors.textSecondary,
     textAlign: 'center',
     letterSpacing: 4,
@@ -228,7 +268,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   tagline: {
-    ...typography.h3,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.textTertiary,
     fontStyle: 'italic',
     marginTop: spacing.xl,
@@ -240,7 +281,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   welcomeBack: {
-    ...typography.bodySmall,
+    fontSize: 14,
+    fontWeight: '400',
     color: colors.textTertiary,
   },
   footer: {
@@ -248,7 +290,8 @@ const styles = StyleSheet.create({
     bottom: spacing.xl,
   },
   version: {
-    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.textMuted,
   },
 });

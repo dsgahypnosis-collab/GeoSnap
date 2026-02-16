@@ -197,15 +197,18 @@ backend:
 
   - task: "Strata AI Mentor API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/strata/ask uses GPT-4o for geological Q&A"
+      - working: true
+        agent: "testing"
+        comment: "Strata AI mentor working perfectly. Answered 3/3 geological questions with detailed, personalized responses. GPT-4o integration successful. Activity tracking and user personalization updates working."
 
 frontend:
   - task: "Intro/Splash Screen"

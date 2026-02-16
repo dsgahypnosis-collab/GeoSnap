@@ -385,6 +385,46 @@ function PropertyItem({ label, value, icon }: { label: string; value: string; ic
   );
 }
 
+// Helper function to parse geological era text into years
+function parseGeologicalAge(eraText: string): number | undefined {
+  const text = eraText.toLowerCase();
+  
+  // Try to extract numbers
+  const billionMatch = text.match(/(\d+\.?\d*)\s*billion/);
+  if (billionMatch) {
+    return parseFloat(billionMatch[1]) * 1000000000;
+  }
+  
+  const millionMatch = text.match(/(\d+\.?\d*)\s*million/);
+  if (millionMatch) {
+    return parseFloat(millionMatch[1]) * 1000000;
+  }
+  
+  const thousandMatch = text.match(/(\d+\.?\d*)\s*thousand/);
+  if (thousandMatch) {
+    return parseFloat(thousandMatch[1]) * 1000;
+  }
+  
+  // Era-based estimates
+  if (text.includes('precambrian') || text.includes('archean')) return 3000000000;
+  if (text.includes('proterozoic')) return 2000000000;
+  if (text.includes('cambrian')) return 500000000;
+  if (text.includes('ordovician')) return 450000000;
+  if (text.includes('silurian')) return 420000000;
+  if (text.includes('devonian')) return 380000000;
+  if (text.includes('carboniferous')) return 320000000;
+  if (text.includes('permian')) return 270000000;
+  if (text.includes('triassic')) return 230000000;
+  if (text.includes('jurassic')) return 170000000;
+  if (text.includes('cretaceous')) return 100000000;
+  if (text.includes('paleogene') || text.includes('eocene')) return 50000000;
+  if (text.includes('neogene') || text.includes('miocene')) return 15000000;
+  if (text.includes('quaternary') || text.includes('pleistocene')) return 1000000;
+  if (text.includes('holocene')) return 10000;
+  
+  return undefined;
+}
+
 const propertyStyles = StyleSheet.create({
   item: {
     flexDirection: 'row',

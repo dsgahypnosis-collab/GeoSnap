@@ -5,3 +5,4 @@ export { RockTypeBadge } from './RockTypeBadge';
 export { SpecimenCard } from './SpecimenCard';
 export { XPProgressBar } from './XPProgressBar';
 export { AchievementCard } from './AchievementCard';
+export { DeepTimeVisualization } from './DeepTimeVisualization';

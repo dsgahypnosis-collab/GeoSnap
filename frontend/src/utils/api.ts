@@ -167,6 +167,39 @@ class ApiClient {
     if (context) params.append('context', context);
     return this.request(`/strata/ask?${params.toString()}`, { method: 'POST' });
   }
+
+  // Subscription & Monetization
+  async getSubscriptionTiers(): Promise<{ tiers: any[]; specialist_packs: any[] }> {
+    return this.request('/subscription/tiers');
+  }
+
+  async getSubscriptionStatus(): Promise<any> {
+    return this.request('/subscription/status');
+  }
+
+  async startFreeTrial(): Promise<any> {
+    return this.request('/subscription/start-trial', { method: 'POST' });
+  }
+
+  async subscribe(tierId: string, isYearly: boolean = false): Promise<any> {
+    return this.request(`/subscription/subscribe?tier_id=${tierId}&is_yearly=${isYearly}`, {
+      method: 'POST',
+    });
+  }
+
+  async purchaseSpecialistPack(packId: string): Promise<any> {
+    return this.request(`/subscription/purchase-pack?pack_id=${packId}`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelSubscription(): Promise<any> {
+    return this.request('/subscription/cancel', { method: 'POST' });
+  }
+
+  async restorePurchases(): Promise<any> {
+    return this.request('/subscription/restore', { method: 'POST' });
+  }
 }
 
 export const api = new ApiClient();

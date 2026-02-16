@@ -267,6 +267,24 @@ export default function SpecimenDetailScreen() {
           </GlassPanel>
         )}
 
+        {/* Deep Time Visualization - Scrub through Earth's history */}
+        {specimenData?.geological_era && (
+          <View style={styles.section}>
+            <DeepTimeVisualization
+              events={specimenData.deep_time_events && specimenData.deep_time_events.length > 0 
+                ? specimenData.deep_time_events.map(e => ({
+                    years_ago: e.years_ago,
+                    event: e.event,
+                    era: e.era,
+                    color: colors.crystalTeal
+                  }))
+                : undefined
+              }
+              specimenAge={parseGeologicalAge(specimenData.geological_era)}
+            />
+          </View>
+        )}
+
         {/* Interesting Facts */}
         {specimenData?.interesting_facts && specimenData.interesting_facts.length > 0 && (
           <GlassPanel style={styles.section} variant="elevated">

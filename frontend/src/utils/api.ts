@@ -3,6 +3,26 @@ import { Specimen, FieldNote, UserProfile, PhysicalTestGuidance, LeaderboardData
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
+export interface PersonalizedContent {
+  daily_tip: string;
+  recommended_tests: string[];
+  learning_focus: string;
+  next_challenge: {
+    id: string;
+    name: string;
+    description: string;
+    xp: number;
+    type: string;
+    target: string | number;
+  };
+  geological_fact: string;
+  streak_message: string;
+}
+
+export interface EnhancedLeaderboardData extends LeaderboardData {
+  personalized: PersonalizedContent;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -125,8 +145,20 @@ class ApiClient {
     });
   }
 
-  async getLeaderboard(): Promise<LeaderboardData> {
+  async getLeaderboard(): Promise<EnhancedLeaderboardData> {
     return this.request('/leaderboard');
+  }
+
+  // Personalization
+  async getPersonalizedContent(): Promise<PersonalizedContent> {
+    return this.request('/personalized-content');
+  }
+
+  async trackActivity(activityType: string, activityData: Record<string, any> = {}): Promise<{ message: string }> {
+    return this.request(`/track-activity?activity_type=${encodeURIComponent(activityType)}`, {
+      method: 'POST',
+      body: JSON.stringify(activityData),
+    });
   }
 
   // Strata AI Mentor

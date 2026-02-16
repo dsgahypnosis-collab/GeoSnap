@@ -78,15 +78,6 @@ export default function IntroScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Deep background gradient - cave darkness */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.obsidian }]} />
-      <LinearGradient
-        colors={[colors.obsidian, colors.caveShadow, colors.basalt]}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      />
-
       {/* Ambient light glow - like headlamp in a cave */}
       <Animated.View
         style={[

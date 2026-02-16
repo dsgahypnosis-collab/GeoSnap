@@ -20,7 +20,7 @@ import { colors, typography, spacing, borderRadius, shadows, rockTypeColors } fr
 import { useAppStore } from '../../src/stores/appStore';
 import { api } from '../../src/utils/api';
 import { Specimen } from '../../src/types';
-import { GlassPanel, ObsidianButton, ConfidenceBadge, RockTypeBadge } from '../../src/components';
+import { GlassPanel, ObsidianButton, ConfidenceBadge, RockTypeBadge, DeepTimeVisualization } from '../../src/components';
 
 const { width } = Dimensions.get('window');
 

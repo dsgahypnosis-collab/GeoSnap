@@ -79,6 +79,7 @@ export default function IntroScreen() {
   return (
     <View style={styles.container}>
       {/* Deep background gradient - cave darkness */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.obsidian }]} />
       <LinearGradient
         colors={[colors.obsidian, colors.caveShadow, colors.basalt]}
         style={StyleSheet.absoluteFill}

@@ -479,7 +479,7 @@ Make your response engaging - include fascinating facts that will make the user 
         
         user_message = UserMessage(
             text=user_prompt,
-            image_contents=[image_content]
+            file_contents=[image_content]
         )
         
         response = await chat.send_message(user_message)

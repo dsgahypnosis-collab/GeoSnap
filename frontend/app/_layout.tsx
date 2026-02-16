@@ -28,17 +28,10 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
-          name="camera"
+          name="strata"
           options={{
-            presentation: 'fullScreenModal',
+            presentation: 'modal',
             animation: 'slide_from_bottom',
-          }}
-        />
-        <Stack.Screen
-          name="identification"
-          options={{
-            presentation: 'card',
-            animation: 'slide_from_right',
           }}
         />
         <Stack.Screen
@@ -46,13 +39,6 @@ export default function RootLayout() {
           options={{
             presentation: 'card',
             animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="physical-test"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
           }}
         />
       </Stack>

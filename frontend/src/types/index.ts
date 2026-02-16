@@ -49,6 +49,7 @@ export interface SpecimenData {
   collector_value?: string;
   market_value_range?: string;
   interesting_facts: string[];
+  deep_time_events?: { years_ago: number; event: string; era?: string }[];
 }
 
 export interface Specimen {

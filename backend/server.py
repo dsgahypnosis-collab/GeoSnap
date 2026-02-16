@@ -182,6 +182,159 @@ class PersonalizedContent(BaseModel):
     geological_fact: str
     streak_message: str
 
+# ==================== SUBSCRIPTION & MONETIZATION MODELS ====================
+
+class SubscriptionTier(BaseModel):
+    id: str
+    name: str
+    price_monthly: float
+    price_yearly: float
+    features: List[str]
+    identifications_per_day: int  # -1 for unlimited
+    collection_limit: int  # -1 for unlimited
+    has_deep_time: bool
+    has_offline_mode: bool
+    has_export: bool
+    has_priority_ai: bool
+    has_advanced_tests: bool
+    has_specialist_packs: bool
+
+class UserSubscription(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    tier_id: str  # free, explorer, geologist_pro
+    status: str = "active"  # active, cancelled, expired, trial
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = None
+    is_yearly: bool = False
+    payment_method: Optional[str] = None
+    auto_renew: bool = True
+    trial_used: bool = False
+
+class UsageTracking(BaseModel):
+    user_id: str
+    date: str  # YYYY-MM-DD
+    identifications_used: int = 0
+    strata_queries: int = 0
+    exports_used: int = 0
+
+class PurchaseRecord(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    item_type: str  # subscription, specialist_pack, tip
+    item_id: str
+    amount: float
+    currency: str = "USD"
+    status: str = "completed"
+    purchased_at: datetime = Field(default_factory=datetime.utcnow)
+    receipt_data: Optional[str] = None
+
+# Subscription Tiers Definition
+SUBSCRIPTION_TIERS = {
+    "free": SubscriptionTier(
+        id="free",
+        name="Free Explorer",
+        price_monthly=0,
+        price_yearly=0,
+        features=[
+            "5 AI identifications per day",
+            "Basic mineral database",
+            "Field notebook (10 notes max)",
+            "Collection (20 specimens max)",
+            "Community access"
+        ],
+        identifications_per_day=5,
+        collection_limit=20,
+        has_deep_time=False,
+        has_offline_mode=False,
+        has_export=False,
+        has_priority_ai=False,
+        has_advanced_tests=False,
+        has_specialist_packs=False
+    ),
+    "explorer": SubscriptionTier(
+        id="explorer",
+        name="Explorer",
+        price_monthly=4.99,
+        price_yearly=39.99,
+        features=[
+            "25 AI identifications per day",
+            "Deep Time Visualization",
+            "Unlimited field notes",
+            "Collection (100 specimens)",
+            "Offline mode",
+            "Basic export (PDF)",
+            "Priority support"
+        ],
+        identifications_per_day=25,
+        collection_limit=100,
+        has_deep_time=True,
+        has_offline_mode=True,
+        has_export=True,
+        has_priority_ai=False,
+        has_advanced_tests=False,
+        has_specialist_packs=False
+    ),
+    "geologist_pro": SubscriptionTier(
+        id="geologist_pro",
+        name="Geologist Pro",
+        price_monthly=9.99,
+        price_yearly=79.99,
+        features=[
+            "Unlimited AI identifications",
+            "Deep Time Visualization",
+            "Unlimited everything",
+            "Priority AI processing",
+            "Advanced physical tests",
+            "Specialist packs included",
+            "Export to PDF, CSV, JSON",
+            "Offline mode with sync",
+            "Early access to new features",
+            "Direct expert support"
+        ],
+        identifications_per_day=-1,
+        collection_limit=-1,
+        has_deep_time=True,
+        has_offline_mode=True,
+        has_export=True,
+        has_priority_ai=True,
+        has_advanced_tests=True,
+        has_specialist_packs=True
+    )
+}
+
+# Specialist Packs (One-time purchases)
+SPECIALIST_PACKS = {
+    "gemstone_expert": {
+        "id": "gemstone_expert",
+        "name": "Gemstone Expert Pack",
+        "price": 4.99,
+        "description": "Advanced gemstone identification with cut analysis, clarity grading, and market valuation",
+        "features": ["50+ gemstone varieties", "Cut quality analysis", "Clarity grading", "Market value estimation"]
+    },
+    "fossil_hunter": {
+        "id": "fossil_hunter",
+        "name": "Fossil Hunter Pack",
+        "price": 4.99,
+        "description": "Comprehensive fossil identification with age estimation and paleontological context",
+        "features": ["500+ fossil types", "Age estimation", "Paleontological context", "Evolutionary timeline"]
+    },
+    "meteorite_finder": {
+        "id": "meteorite_finder",
+        "name": "Meteorite Finder Pack",
+        "price": 6.99,
+        "description": "Identify meteorites vs meteor-wrongs with composition analysis",
+        "features": ["Meteorite classification", "Composition analysis", "Origin estimation", "Authentication guidance"]
+    },
+    "crystal_healer": {
+        "id": "crystal_healer",
+        "name": "Crystal & Mineral Mastery",
+        "price": 3.99,
+        "description": "Extended crystal database with formation details and collecting tips",
+        "features": ["1000+ minerals", "Crystal system details", "Collecting locations", "Care instructions"]
+    }
+}
+
 # ==================== ACHIEVEMENT DEFINITIONS ====================
 
 DEFAULT_ACHIEVEMENTS = [

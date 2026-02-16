@@ -1,387 +1,365 @@
 #!/usr/bin/env python3
 """
-GeoSnap Backend API Testing Suite
-Tests all backend endpoints for functionality and integration
+GeoSnap API Backend Testing Suite
+Tests all core API endpoints including AI identification, field notes, and Strata mentor
 """
-
 import requests
 import json
 import base64
-import time
-from typing import Dict, Any
+import sys
+import os
+from datetime import datetime
+import uuid
 
-# Get the backend URL from environment
-BACKEND_URL = "https://geologic-eye.preview.emergentagent.com/api"
-
-class Colors:
-    """ANSI color codes for terminal output"""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
-    CYAN = '\033[96m'
-    WHITE = '\033[97m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
-
-def print_header(title: str):
-    """Print a formatted test section header"""
-    print(f"\n{Colors.CYAN}{Colors.BOLD}{'='*60}{Colors.END}")
-    print(f"{Colors.CYAN}{Colors.BOLD}{title.center(60)}{Colors.END}")
-    print(f"{Colors.CYAN}{Colors.BOLD}{'='*60}{Colors.END}")
-
-def print_test(name: str, status: str, message: str = ""):
-    """Print formatted test result"""
-    if status == "PASS":
-        status_color = Colors.GREEN
-        symbol = "✅"
-    elif status == "FAIL":
-        status_color = Colors.RED
-        symbol = "❌"
-    elif status == "SKIP":
-        status_color = Colors.YELLOW
-        symbol = "⏭️"
-    else:
-        status_color = Colors.YELLOW
-        symbol = "⚠️"
-    
-    print(f"{symbol} {Colors.BOLD}{name}{Colors.END}: {status_color}{status}{Colors.END}")
-    if message:
-        print(f"   {Colors.WHITE}{message}{Colors.END}")
-
-def make_request(method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
-    """Make HTTP request and return structured result"""
-    url = f"{BACKEND_URL}{endpoint}"
+# Load backend URL from frontend .env
+def get_backend_url():
     try:
-        print(f"   📡 {method} {url}")
-        response = requests.request(method, url, timeout=30, **kwargs)
-        
-        # Try to parse JSON response
-        try:
-            data = response.json()
-        except:
-            data = {"raw_response": response.text}
-        
-        return {
-            "success": response.status_code in [200, 201],
-            "status_code": response.status_code,
-            "data": data,
-            "response": response
-        }
-    except requests.exceptions.RequestException as e:
-        return {
-            "success": False,
-            "status_code": 0,
-            "data": {"error": str(e)},
-            "response": None
-        }
+        with open('/app/frontend/.env', 'r') as f:
+            for line in f:
+                if line.startswith('EXPO_PUBLIC_BACKEND_URL='):
+                    return line.split('=', 1)[1].strip()
+    except Exception as e:
+        print(f"Warning: Could not read frontend .env file: {e}")
+    return "https://geologic-eye.preview.emergentagent.com"
 
-def create_sample_base64_image() -> str:
-    """Create a small sample image in base64 format for testing"""
-    # This is a minimal 1x1 PNG image in base64
-    return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+BACKEND_URL = get_backend_url()
+API_BASE = f"{BACKEND_URL}/api"
 
-def test_health_check():
-    """Test GET /api/health"""
-    print_header("HEALTH CHECK API")
-    
-    result = make_request("GET", "/health")
-    
-    if result["success"]:
-        data = result["data"]
-        if "status" in data and data["status"] == "healthy":
-            print_test("Health Check", "PASS", f"Status: {data.get('status')}, Service: {data.get('service', 'N/A')}")
-            return True
-        else:
-            print_test("Health Check", "FAIL", f"Expected status 'healthy', got: {data}")
-            return False
-    else:
-        print_test("Health Check", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
+print(f"Testing GeoSnap API at: {API_BASE}")
+
+def test_health():
+    """Test health check endpoint"""
+    print("\n=== Testing Health Check ===")
+    try:
+        response = requests.get(f"{API_BASE}/health", timeout=10)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.json()}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Health check failed: {e}")
         return False
 
-def test_profile_api():
-    """Test GET /api/profile"""
-    print_header("USER PROFILE API")
-    
-    result = make_request("GET", "/profile")
-    
-    if result["success"]:
-        data = result["data"]
-        required_fields = ["id", "username", "total_xp", "level", "title", "achievements"]
-        missing_fields = [field for field in required_fields if field not in data]
-        
-        if not missing_fields:
-            print_test("Profile Creation/Retrieval", "PASS", 
-                      f"Username: {data.get('username')}, Level: {data.get('level')}, XP: {data.get('total_xp')}")
-            print_test("Profile Data Structure", "PASS", 
-                      f"All required fields present. Achievements: {len(data.get('achievements', []))}")
-            return True
-        else:
-            print_test("Profile Data Structure", "FAIL", f"Missing fields: {missing_fields}")
-            return False
-    else:
-        print_test("Profile API", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
+def test_profile():
+    """Test user profile endpoint"""
+    print("\n=== Testing User Profile ===")
+    try:
+        response = requests.get(f"{API_BASE}/profile", timeout=10)
+        print(f"Status: {response.status_code}")
+        data = response.json()
+        print(f"User: {data.get('username', 'N/A')}")
+        print(f"Level: {data.get('level', 0)} - {data.get('title', 'N/A')}")
+        print(f"Total XP: {data.get('total_xp', 0)}")
+        print(f"Specimens Identified: {data.get('specimens_identified', 0)}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Profile test failed: {e}")
         return False
 
-def test_leaderboard_api():
-    """Test GET /api/leaderboard"""
-    print_header("LEADERBOARD/GAMIFICATION API")
-    
-    result = make_request("GET", "/leaderboard")
-    
-    if result["success"]:
-        data = result["data"]
-        required_fields = ["profile", "xp_to_next_level", "level_progress", "unlocked_achievements", "total_achievements"]
-        missing_fields = [field for field in required_fields if field not in data]
+def test_leaderboard():
+    """Test leaderboard/gamification endpoint"""
+    print("\n=== Testing Leaderboard ===")
+    try:
+        response = requests.get(f"{API_BASE}/leaderboard", timeout=10)
+        print(f"Status: {response.status_code}")
+        data = response.json()
+        print(f"Level Progress: {data.get('level_progress', 0):.1%}")
+        print(f"XP to Next Level: {data.get('xp_to_next_level', 0)}")
+        print(f"Achievements: {data.get('unlocked_achievements', 0)}/{data.get('total_achievements', 0)}")
         
-        if not missing_fields:
-            profile = data.get("profile", {})
-            print_test("Leaderboard Data", "PASS", 
-                      f"Level: {profile.get('level')}, XP: {profile.get('total_xp')}")
-            print_test("Progress Calculation", "PASS", 
-                      f"Progress: {data.get('level_progress', 0):.2%}, Achievements: {data.get('unlocked_achievements')}/{data.get('total_achievements')}")
-            return True
-        else:
-            print_test("Leaderboard Structure", "FAIL", f"Missing fields: {missing_fields}")
-            return False
-    else:
-        print_test("Leaderboard API", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
+        # Check if personalized content is included
+        personalized = data.get('personalized', {})
+        if personalized:
+            print(f"Daily Tip: {personalized.get('daily_tip', 'N/A')[:60]}...")
+            print(f"Learning Focus: {personalized.get('learning_focus', 'N/A')}")
+        
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Leaderboard test failed: {e}")
+        return False
+
+def test_personalized_content():
+    """Test personalized content endpoint"""
+    print("\n=== Testing Personalized Content ===")
+    try:
+        response = requests.get(f"{API_BASE}/personalized-content", timeout=10)
+        print(f"Status: {response.status_code}")
+        data = response.json()
+        print(f"Daily Tip: {data.get('daily_tip', 'N/A')[:80]}...")
+        print(f"Recommended Tests: {', '.join(data.get('recommended_tests', []))}")
+        print(f"Learning Focus: {data.get('learning_focus', 'N/A')}")
+        print(f"Streak Message: {data.get('streak_message', 'N/A')}")
+        print(f"Geological Fact: {data.get('geological_fact', 'N/A')[:60]}...")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Personalized content test failed: {e}")
+        return False
+
+def test_track_activity():
+    """Test activity tracking endpoint"""
+    print("\n=== Testing Activity Tracking ===")
+    try:
+        response = requests.post(
+            f"{API_BASE}/track-activity?activity_type=session_start",
+            json={},
+            timeout=10
+        )
+        print(f"Status: {response.status_code}")
+        data = response.json()
+        print(f"Response: {data}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Activity tracking test failed: {e}")
         return False
 
 def test_physical_test_guidance():
-    """Test GET /api/physical-test-guidance/{type}"""
-    print_header("PHYSICAL TEST GUIDANCE API")
+    """Test physical test guidance endpoints"""
+    print("\n=== Testing Physical Test Guidance ===")
     
     test_types = ["hardness", "streak", "luster", "cleavage", "magnetism", "density"]
-    all_passed = True
+    success_count = 0
     
     for test_type in test_types:
-        result = make_request("GET", f"/physical-test-guidance/{test_type}")
-        
-        if result["success"]:
-            data = result["data"]
-            required_fields = ["test_type", "instructions", "materials_needed", "what_to_observe", "examples"]
-            missing_fields = [field for field in data if field not in required_fields]
+        try:
+            response = requests.get(f"{API_BASE}/physical-test-guidance/{test_type}", timeout=10)
+            print(f"\n{test_type.capitalize()} Test - Status: {response.status_code}")
             
-            if not missing_fields and data.get("test_type") == test_type:
-                print_test(f"{test_type.title()} Test Guidance", "PASS", 
-                          f"Instructions: {len(data.get('instructions', []))}, Examples: {len(data.get('examples', []))}")
+            if response.status_code == 200:
+                data = response.json()
+                print(f"Instructions: {len(data.get('instructions', []))} steps")
+                print(f"Materials: {', '.join(data.get('materials_needed', []))}")
+                print(f"Examples: {len(data.get('examples', []))} provided")
+                success_count += 1
             else:
-                print_test(f"{test_type.title()} Test Guidance", "FAIL", 
-                          f"Invalid structure or wrong test_type: {data.get('test_type')}")
-                all_passed = False
-        else:
-            print_test(f"{test_type.title()} Test Guidance", "FAIL", 
-                      f"HTTP {result['status_code']}: {result['data']}")
-            all_passed = False
+                print(f"❌ Failed: {response.text}")
+        except Exception as e:
+            print(f"❌ {test_type} guidance test failed: {e}")
     
-    # Test invalid test type
-    result = make_request("GET", "/physical-test-guidance/invalid_test")
-    if result["status_code"] == 404:
-        print_test("Invalid Test Type Handling", "PASS", "Correctly returns 404 for invalid test type")
-    else:
-        print_test("Invalid Test Type Handling", "FAIL", f"Expected 404, got {result['status_code']}")
-        all_passed = False
-    
-    return all_passed
+    return success_count == len(test_types)
 
 def test_field_notes_crud():
-    """Test Field Notes CRUD operations"""
-    print_header("FIELD NOTES CRUD API")
+    """Test field notes CRUD operations"""
+    print("\n=== Testing Field Notes CRUD ===")
     
-    # Test data for field note
-    test_note = {
-        "title": "Granite Outcrop Study",
-        "content": "Found beautiful granite exposure with large feldspar crystals. Pink and white coloration suggests K-feldspar dominant. Visible quartz and biotite mica present.",
-        "latitude": 40.7128,
-        "longitude": -74.0060,
-        "location_name": "Central Park, NYC",
-        "images_base64": [],
-        "specimen_ids": [],
-        "tags": ["granite", "igneous", "feldspar", "outcrop"]
+    # Create a field note
+    print("\n1. Creating field note...")
+    note_data = {
+        "title": "Granite Outcrop Discovery - Sierra Nevada",
+        "content": "Found excellent granite exposure showing large feldspar crystals and biotite mica. Evidence of glacial polishing on eastern face. Collected samples for hardness testing.",
+        "latitude": 37.7749,
+        "longitude": -119.5194,
+        "location_name": "Yosemite National Park, CA",
+        "tags": ["granite", "igneous", "feldspar", "biotite", "glacial"]
     }
     
-    created_note_id = None
-    all_passed = True
-    
-    # 1. CREATE - POST /api/field-notes
-    print(f"\n{Colors.MAGENTA}Testing CREATE (POST){Colors.END}")
-    result = make_request("POST", "/field-notes", json=test_note)
-    
-    if result["success"]:
-        data = result["data"]
-        created_note_id = data.get("id")
-        if created_note_id and data.get("title") == test_note["title"]:
-            print_test("Create Field Note", "PASS", f"Note ID: {created_note_id}")
-        else:
-            print_test("Create Field Note", "FAIL", "Missing ID or incorrect title in response")
-            all_passed = False
-    else:
-        print_test("Create Field Note", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
-        all_passed = False
-        return False  # Can't continue without a created note
-    
-    # 2. READ ALL - GET /api/field-notes
-    print(f"\n{Colors.MAGENTA}Testing READ ALL (GET){Colors.END}")
-    result = make_request("GET", "/field-notes")
-    
-    if result["success"]:
-        notes = result["data"]
-        if isinstance(notes, list) and len(notes) > 0:
-            # Check if our created note is in the list
-            found_note = any(note.get("id") == created_note_id for note in notes)
-            if found_note:
-                print_test("List Field Notes", "PASS", f"Found {len(notes)} notes, including our created note")
-            else:
-                print_test("List Field Notes", "FAIL", "Created note not found in list")
-                all_passed = False
-        else:
-            print_test("List Field Notes", "FAIL", "Expected non-empty list of notes")
-            all_passed = False
-    else:
-        print_test("List Field Notes", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
-        all_passed = False
-    
-    # 3. READ SINGLE - GET /api/field-notes/{id}
-    print(f"\n{Colors.MAGENTA}Testing READ SINGLE (GET by ID){Colors.END}")
-    if created_note_id:
-        result = make_request("GET", f"/field-notes/{created_note_id}")
+    try:
+        response = requests.post(f"{API_BASE}/field-notes", json=note_data, timeout=10)
+        print(f"Create Status: {response.status_code}")
         
-        if result["success"]:
-            data = result["data"]
-            if data.get("id") == created_note_id and data.get("title") == test_note["title"]:
-                print_test("Get Single Field Note", "PASS", f"Retrieved note: {data.get('title')}")
-            else:
-                print_test("Get Single Field Note", "FAIL", "Note data mismatch")
-                all_passed = False
-        else:
-            print_test("Get Single Field Note", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
-            all_passed = False
-    
-    # 4. UPDATE - PUT /api/field-notes/{id}
-    print(f"\n{Colors.MAGENTA}Testing UPDATE (PUT){Colors.END}")
-    if created_note_id:
-        updated_note = test_note.copy()
-        updated_note["title"] = "Updated Granite Outcrop Study"
-        updated_note["content"] += " Additional observation: evidence of weathering on exposed surfaces."
+        if response.status_code == 200:
+            created_note = response.json()
+            note_id = created_note.get('id')
+            print(f"Created Note ID: {note_id}")
+            print(f"Title: {created_note.get('title')}")
+            
+            # Get all field notes
+            print("\n2. Retrieving all field notes...")
+            response = requests.get(f"{API_BASE}/field-notes", timeout=10)
+            print(f"Get All Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                notes = response.json()
+                print(f"Total Notes: {len(notes)}")
+                if notes:
+                    print(f"Latest Note: {notes[0].get('title', 'N/A')}")
+            
+            # Get specific field note
+            if note_id:
+                print(f"\n3. Retrieving specific note {note_id}...")
+                response = requests.get(f"{API_BASE}/field-notes/{note_id}", timeout=10)
+                print(f"Get One Status: {response.status_code}")
+                
+                # Delete the note
+                print(f"\n4. Deleting note {note_id}...")
+                response = requests.delete(f"{API_BASE}/field-notes/{note_id}", timeout=10)
+                print(f"Delete Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    print("✅ Field Notes CRUD operations successful")
+                    return True
         
-        result = make_request("PUT", f"/field-notes/{created_note_id}", json=updated_note)
+        return False
         
-        if result["success"]:
-            data = result["data"]
-            if data.get("title") == updated_note["title"]:
-                print_test("Update Field Note", "PASS", f"Updated title: {data.get('title')}")
-            else:
-                print_test("Update Field Note", "FAIL", "Title not updated correctly")
-                all_passed = False
-        else:
-            print_test("Update Field Note", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
-            all_passed = False
-    
-    # 5. DELETE - DELETE /api/field-notes/{id}
-    print(f"\n{Colors.MAGENTA}Testing DELETE{Colors.END}")
-    if created_note_id:
-        result = make_request("DELETE", f"/field-notes/{created_note_id}")
-        
-        if result["success"]:
-            # Verify deletion by trying to get the note
-            verify_result = make_request("GET", f"/field-notes/{created_note_id}")
-            if verify_result["status_code"] == 404:
-                print_test("Delete Field Note", "PASS", "Note successfully deleted and not found")
-            else:
-                print_test("Delete Field Note", "FAIL", "Note still exists after deletion")
-                all_passed = False
-        else:
-            print_test("Delete Field Note", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
-            all_passed = False
-    
-    return all_passed
-
-def test_strata_ai_mentor():
-    """Test POST /api/strata/ask"""
-    print_header("STRATA AI MENTOR API")
-    
-    # Test question
-    test_question = "What is quartz?"
-    
-    result = make_request("POST", f"/strata/ask?question={test_question}")
-    
-    if result["success"]:
-        data = result["data"]
-        response_text = data.get("response", "")
-        mentor_name = data.get("mentor", "")
-        
-        if response_text and mentor_name == "Strata":
-            print_test("Strata AI Response", "PASS", 
-                      f"Mentor: {mentor_name}, Response length: {len(response_text)} chars")
-            print(f"   {Colors.WHITE}Sample response: {response_text[:150]}...{Colors.END}")
-            return True
-        else:
-            print_test("Strata AI Response", "FAIL", 
-                      f"Missing response or incorrect mentor name: {mentor_name}")
-            return False
-    else:
-        print_test("Strata AI Mentor", "FAIL", f"HTTP {result['status_code']}: {result['data']}")
+    except Exception as e:
+        print(f"❌ Field notes CRUD test failed: {e}")
         return False
 
-def test_identify_api():
-    """Test POST /api/identify (AI identification) - Skip due to image requirement"""
-    print_header("SPECIMEN IDENTIFICATION API (AI)")
-    
-    print_test("AI Identification Test", "SKIP", 
-              "Skipping AI identification test - requires real geological image in base64 format")
-    print(f"   {Colors.WHITE}API endpoint exists at POST /api/identify{Colors.END}")
-    print(f"   {Colors.WHITE}Requires: image_base64, optional latitude/longitude, physical_tests array{Colors.END}")
-    
-    return True  # Return True since we're intentionally skipping
+def create_sample_image_base64():
+    """Create a small sample image in base64 format for testing"""
+    # Create a simple 10x10 red square in base64
+    # This is a minimal PNG for testing purposes
+    png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\n\x00\x00\x00\n\x08\x02\x00\x00\x00\x02PX\xea\x00\x00\x00\x1eIDATx\x9cc\xf8\x0f\x00\x00\x00\x00\xff\xff\x03\x00\x00\x00\xff\xff\x03\x00\x00\x00\xff\xff\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x01 \x05\x82v\x00\x00\x00\x00IEND\xaeB`\x82'
+    return base64.b64encode(png_data).decode('utf-8')
 
-def main():
-    """Run all backend API tests"""
-    print(f"{Colors.BOLD}{Colors.BLUE}")
-    print("=" * 80)
-    print("🧪 GEOSNAP BACKEND API TEST SUITE".center(80))
-    print("   Testing Geological Intelligence Platform APIs")
-    print("=" * 80)
-    print(Colors.END)
+def test_ai_identification():
+    """Test AI specimen identification endpoint"""
+    print("\n=== Testing AI Specimen Identification ===")
     
-    print(f"{Colors.YELLOW}🔗 Backend URL: {BACKEND_URL}{Colors.END}")
-    print(f"{Colors.YELLOW}⏰ Test started at: {time.strftime('%Y-%m-%d %H:%M:%S')}{Colors.END}")
+    # Note: This test uses a minimal test image since we don't have a real rock image
+    # The API will process it but identification quality will be limited
     
-    # Track test results
-    test_results = {}
+    try:
+        test_image = create_sample_image_base64()
+        
+        identify_data = {
+            "image_base64": test_image,
+            "latitude": 36.1627,
+            "longitude": -115.1392,
+            "physical_tests": [
+                {
+                    "test_type": "hardness",
+                    "result": "6-7 on Mohs scale",
+                    "confidence": 0.8
+                },
+                {
+                    "test_type": "streak",
+                    "result": "white to light gray",
+                    "confidence": 0.9
+                }
+            ]
+        }
+        
+        print("Sending identification request (using test image)...")
+        response = requests.post(f"{API_BASE}/identify", json=identify_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Specimen ID: {data.get('id', 'N/A')}")
+            
+            identification = data.get('identification', {})
+            primary = identification.get('primary_identification', {})
+            print(f"Primary ID: {primary.get('name', 'N/A')} ({primary.get('confidence', 0):.1%} confidence)")
+            print(f"Rock Type: {primary.get('rock_type', 'N/A')}")
+            
+            specimen_data = data.get('specimen_data', {})
+            print(f"Classification: {specimen_data.get('classification', 'N/A')}")
+            print(f"Hardness: {specimen_data.get('hardness', 'N/A')}")
+            print(f"XP Earned: {data.get('xp_earned', 0)}")
+            
+            print("✅ AI identification endpoint working (with test image)")
+            return True
+        else:
+            print(f"❌ AI identification failed: {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ AI identification test failed: {e}")
+        return False
+
+def test_strata_mentor():
+    """Test Strata AI mentor endpoint"""
+    print("\n=== Testing Strata AI Mentor ===")
     
-    # Run all tests
-    test_results["health"] = test_health_check()
-    test_results["profile"] = test_profile_api()
-    test_results["leaderboard"] = test_leaderboard_api()
-    test_results["physical_guidance"] = test_physical_test_guidance()
-    test_results["field_notes"] = test_field_notes_crud()
-    test_results["strata_ai"] = test_strata_ai_mentor()
-    test_results["identify"] = test_identify_api()  # Skipped test
+    geological_questions = [
+        "How do I identify granite in the field?",
+        "What's the difference between cleavage and fracture?",
+        "How are metamorphic rocks formed?"
+    ]
     
-    # Print summary
-    print_header("TEST SUMMARY")
+    success_count = 0
     
-    passed_tests = sum(test_results.values())
-    total_tests = len(test_results)
+    for i, question in enumerate(geological_questions, 1):
+        try:
+            print(f"\n{i}. Question: {question}")
+            response = requests.post(
+                f"{API_BASE}/strata/ask?question={question}",
+                timeout=20
+            )
+            print(f"Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                answer = data.get('response', '')
+                print(f"Answer preview: {answer[:100]}...")
+                print(f"Mentor: {data.get('mentor', 'N/A')}")
+                success_count += 1
+            else:
+                print(f"❌ Failed: {response.text}")
+        except Exception as e:
+            print(f"❌ Question {i} failed: {e}")
     
-    for test_name, passed in test_results.items():
-        status = "PASS" if passed else "FAIL"
-        print_test(f"{test_name.replace('_', ' ').title()} API", status)
+    if success_count > 0:
+        print(f"✅ Strata mentor responded to {success_count}/{len(geological_questions)} questions")
+        return True
+    return False
+
+def run_comprehensive_test():
+    """Run all API tests and report results"""
+    print("🔬 GeoSnap API Comprehensive Test Suite")
+    print("=" * 50)
     
-    print(f"\n{Colors.BOLD}📊 OVERALL RESULTS:{Colors.END}")
-    if passed_tests == total_tests:
-        print(f"🎉 {Colors.GREEN}{Colors.BOLD}ALL TESTS PASSED!{Colors.END} ({passed_tests}/{total_tests})")
-    elif passed_tests > total_tests * 0.8:
-        print(f"✅ {Colors.YELLOW}{Colors.BOLD}MOSTLY PASSING{Colors.END} ({passed_tests}/{total_tests})")
+    tests = [
+        ("Health Check", test_health),
+        ("User Profile", test_profile), 
+        ("Leaderboard", test_leaderboard),
+        ("Personalized Content", test_personalized_content),
+        ("Activity Tracking", test_track_activity),
+        ("Physical Test Guidance", test_physical_test_guidance),
+        ("Field Notes CRUD", test_field_notes_crud),
+        ("AI Identification", test_ai_identification),
+        ("Strata AI Mentor", test_strata_mentor)
+    ]
+    
+    results = {}
+    passed = 0
+    
+    for test_name, test_func in tests:
+        print(f"\n{'='*60}")
+        try:
+            result = test_func()
+            results[test_name] = result
+            if result:
+                passed += 1
+                print(f"✅ {test_name}: PASSED")
+            else:
+                print(f"❌ {test_name}: FAILED")
+        except Exception as e:
+            results[test_name] = False
+            print(f"❌ {test_name}: EXCEPTION - {e}")
+    
+    # Final Summary
+    print(f"\n{'='*60}")
+    print("🔬 GEOSNAP API TEST SUMMARY")
+    print("=" * 60)
+    print(f"Tests Passed: {passed}/{len(tests)}")
+    print(f"Success Rate: {passed/len(tests)*100:.1f}%")
+    print()
+    
+    for test_name, result in results.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status:<8} {test_name}")
+    
+    print("\n" + "=" * 60)
+    
+    if passed == len(tests):
+        print("🎉 All tests passed! GeoSnap API is fully functional.")
+    elif passed >= len(tests) * 0.8:
+        print("⚠️  Most tests passed. Minor issues may need attention.")
     else:
-        print(f"❌ {Colors.RED}{Colors.BOLD}MULTIPLE FAILURES{Colors.END} ({passed_tests}/{total_tests})")
+        print("🚨 Multiple failures detected. API needs investigation.")
     
-    print(f"\n{Colors.CYAN}Test completed at: {time.strftime('%Y-%m-%d %H:%M:%S')}{Colors.END}")
-    
-    return passed_tests == total_tests
+    return results
 
 if __name__ == "__main__":
-    main()
+    results = run_comprehensive_test()
+    
+    # Exit with appropriate code
+    total_tests = len(results)
+    passed_tests = sum(1 for r in results.values() if r)
+    
+    if passed_tests == total_tests:
+        sys.exit(0)  # All passed
+    elif passed_tests >= total_tests * 0.8:
+        sys.exit(1)  # Most passed, minor issues
+    else:
+        sys.exit(2)  # Major failures

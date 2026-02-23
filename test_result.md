@@ -213,6 +213,66 @@ backend:
         agent: "testing"
         comment: "Strata AI mentor working perfectly. Answered 3/3 geological questions with detailed, personalized responses. GPT-4o integration successful. Activity tracking and user personalization updates working."
 
+  - task: "Subscription Tiers API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/subscription/tiers returns all subscription tiers and specialist packs. Needs testing."
+
+  - task: "Subscription Status API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/subscription/status returns current user subscription status, usage limits, and features. Needs testing."
+
+  - task: "Free Trial API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/subscription/start-trial starts 7-day free trial for Explorer tier. Needs testing."
+
+  - task: "Subscribe API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/subscription/subscribe simulates subscription to paid tier. Needs testing."
+
+  - task: "Specialist Pack Purchase API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/subscription/purchase-pack handles one-time specialist pack purchases. Needs testing."
+
 frontend:
   - task: "Intro/Splash Screen"
     implemented: true

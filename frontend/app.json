@@ -8,18 +8,39 @@
     "scheme": "geosnap",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "description": "AI-powered geological intelligence platform for rock, mineral, and gemstone identification",
+    "primaryColor": "#FF8C00",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.geosnap.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Capture specimens for geological identification",
-        "NSPhotoLibraryUsageDescription": "Select specimen photos from your gallery",
-        "NSLocationWhenInUseUsageDescription": "Tag specimen locations for geological context"
+        "NSCameraUsageDescription": "Capture specimens for AI-powered geological identification",
+        "NSPhotoLibraryUsageDescription": "Select specimen photos from your gallery for analysis",
+        "NSPhotoLibraryAddUsageDescription": "Save identified specimens to your photo library",
+        "NSLocationWhenInUseUsageDescription": "Tag specimen locations for geological context mapping",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Track field expeditions and specimen discovery locations",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": []
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
       }
     },
     "android": {
+      "package": "com.geosnap.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0c0c0c"
+        "backgroundColor": "#0a0a0c"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -27,13 +48,25 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS"
       ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "GeoSnap - Geological Intelligence",
+      "shortName": "GeoSnap",
+      "description": "AI-powered rock, mineral, and gemstone identification platform",
+      "themeColor": "#0a0a0c",
+      "backgroundColor": "#0a0a0c"
     },
     "plugins": [
       "expo-router",
@@ -43,30 +76,44 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0c0c0c"
+          "backgroundColor": "#0a0a0c"
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow GeoSnap to access your camera for specimen photography"
+          "cameraPermission": "GeoSnap needs camera access to photograph specimens for AI identification"
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow GeoSnap to access your location for geological context"
+          "locationWhenInUsePermission": "GeoSnap needs location access to geotag your specimen discoveries",
+          "locationAlwaysAndWhenInUsePermission": "GeoSnap uses your location to map field expeditions",
+          "isAndroidBackgroundLocationEnabled": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow GeoSnap to access your photos for specimen selection"
+          "photosPermission": "GeoSnap needs photo library access to analyze existing specimen images"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "geosnap-geological-intelligence"
+      }
+    },
+    "owner": "geosnap",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/geosnap-geological-intelligence"
     }
   }
 }

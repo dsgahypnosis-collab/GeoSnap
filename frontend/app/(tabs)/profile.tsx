@@ -1,4 +1,5 @@
-// Profile Screen - Gamification & Progression
+// Profile Screen - Explorer's Path & Gamification
+// Adventure-Cinematic Design: Explorer's journey through geological mastery
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,12 +12,36 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing, borderRadius, shadows } from '../../src/utils/theme';
+import { adventureColors, adventureTypography, EXPLORER_TITLES } from '../../src/utils/adventureTheme';
 import { useAppStore } from '../../src/stores/appStore';
 import { api } from '../../src/utils/api';
 import { GlassPanel, XPProgressBar, AchievementCard, ObsidianButton } from '../../src/components';
+
+interface SubscriptionStatus {
+  subscription: {
+    tier_id: string;
+    status: string;
+    expires_at: string | null;
+  };
+  tier: {
+    name: string;
+    identifications_per_day: number;
+  };
+  usage: {
+    identifications_today: number;
+    remaining_identifications: number;
+    is_unlimited: boolean;
+  };
+  features: {
+    has_deep_time: boolean;
+    has_offline: boolean;
+    has_export: boolean;
+  };
+}
 
 export default function ProfileScreen() {
   const { profile, leaderboard, fetchProfile, fetchLeaderboard } = useAppStore();

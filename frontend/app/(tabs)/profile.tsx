@@ -48,6 +48,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newUsername, setNewUsername] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
 
   useEffect(() => {
     loadData();
@@ -55,6 +56,13 @@ export default function ProfileScreen() {
 
   const loadData = async () => {
     await Promise.all([fetchProfile(), fetchLeaderboard()]);
+    // Load subscription status
+    try {
+      const status = await api.getSubscriptionStatus();
+      setSubscriptionStatus(status);
+    } catch (error) {
+      console.log('Failed to load subscription status:', error);
+    }
   };
 
   const onRefresh = async () => {

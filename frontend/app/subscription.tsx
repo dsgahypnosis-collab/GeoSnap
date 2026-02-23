@@ -137,17 +137,17 @@ export default function SubscriptionScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Hero Section */}
+        {/* Hero Section - Adventure Style */}
         <View style={styles.hero}>
           <LinearGradient
-            colors={[colors.magmaAmber, colors.specimenGold]}
+            colors={[adventureColors.amberGlow, adventureColors.brassGold]}
             style={styles.heroIcon}
           >
-            <Ionicons name="diamond" size={40} color={colors.obsidian} />
+            <Ionicons name="compass" size={44} color={adventureColors.obsidian} />
           </LinearGradient>
-          <Text style={styles.heroTitle}>Unlock Full Geological Power</Text>
+          <Text style={styles.heroTitle}>EXPLORER'S ARSENAL</Text>
           <Text style={styles.heroSubtitle}>
-            Unlimited identifications, Deep Time visualization, and more
+            Unlock unlimited expeditions, Deep Time journeys, and the full power of geological discovery
           </Text>
         </View>
 

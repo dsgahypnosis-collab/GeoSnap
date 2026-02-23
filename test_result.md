@@ -370,14 +370,43 @@ frontend:
         agent: "main"
         comment: "Chat interface with AI geological mentor"
 
+  - task: "Subscription/Paywall Screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/subscription.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Adventure-themed subscription screen with tiers, free trial, and specialist packs. Integrated into Profile screen with Upgrade button."
+
+  - task: "Profile Subscription Integration"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Profile screen now shows subscription status, usage limits, and Upgrade button for free users. Explorer titles from adventure theme integrated."
+
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 1
+  version: "1.1"
+  test_sequence: 2
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Subscription Tiers API"
+    - "Subscription Status API"
+    - "Free Trial API"
+    - "Subscribe API"
+    - "Specialist Pack Purchase API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -387,3 +416,5 @@ agent_communication:
     message: "GeoSnap MVP implemented with core features: AI identification, gamification, field notebook, collection. Backend APIs working, frontend screens implemented with cinematic 'Subsurface Sublime' design. Needs testing of AI identification with real images."
   - agent: "testing"
     message: "Backend API comprehensive testing completed. 8/9 core APIs working perfectly: health, profile, leaderboard, personalized content, activity tracking, physical test guidance (6 types), field notes CRUD, and Strata AI mentor. AI identification API operational but requires valid image (GPT-4o properly rejects test images). All gamification, personalization, and data persistence features confirmed working. MongoDB integration successful. Ready for production use."
+  - agent: "main"
+    message: "Added subscription/monetization system. New backend endpoints: GET /api/subscription/tiers, GET /api/subscription/status, POST /api/subscription/start-trial, POST /api/subscription/subscribe, POST /api/subscription/purchase-pack. Frontend: Updated Profile screen with subscription status display and Upgrade button, Subscription screen with adventure-themed UI. Please test new subscription APIs."

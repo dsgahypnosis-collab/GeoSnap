@@ -85,6 +85,14 @@ export default function ProfileScreen() {
   const unlockedAchievements = profile?.achievements.filter((a) => a.unlocked) || [];
   const lockedAchievements = profile?.achievements.filter((a) => !a.unlocked) || [];
 
+  // Get Explorer title based on level
+  const getExplorerTitle = (level: number) => {
+    return EXPLORER_TITLES[level] || EXPLORER_TITLES[1];
+  };
+
+  const currentExplorerInfo = profile ? getExplorerTitle(profile.level) : getExplorerTitle(1);
+  const isPremium = subscriptionStatus?.subscription?.tier_id !== 'free';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -94,20 +102,20 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.magmaAmber}
+            tintColor={adventureColors.amberGlow}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header */}
+        {/* Explorer Profile Header */}
         <GlassPanel style={styles.profileCard} variant="elevated">
           <LinearGradient
-            colors={[colors.amethystPurple, colors.mineralBlue]}
+            colors={[adventureColors.brassGold, adventureColors.copperRust]}
             style={styles.avatarGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Ionicons name="person" size={40} color={colors.textPrimary} />
+            <Ionicons name={currentExplorerInfo.icon as any} size={40} color={adventureColors.obsidian} />
           </LinearGradient>
 
           {editingName ? (
@@ -148,7 +156,11 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.title}>{profile?.title || 'Novice Geologist'}</Text>
+          {/* Explorer Title with Adventure styling */}
+          <View style={styles.explorerTitleContainer}>
+            <Text style={styles.explorerTitle}>{currentExplorerInfo.title}</Text>
+            <Text style={styles.explorerSubtitle}>{currentExplorerInfo.description}</Text>
+          </View>
 
           {leaderboard && (
             <View style={styles.xpContainer}>
@@ -158,6 +170,76 @@ export default function ProfileScreen() {
                 progress={leaderboard.level_progress}
                 xpToNext={leaderboard.xp_to_next_level}
               />
+            </View>
+          )}
+        </GlassPanel>
+
+        {/* Subscription Status Card */}
+        <GlassPanel style={styles.subscriptionCard} variant="elevated">
+          <View style={styles.subscriptionHeader}>
+            <View style={styles.subscriptionInfo}>
+              <View style={[
+                styles.tierBadge,
+                isPremium && styles.tierBadgePremium
+              ]}>
+                <Ionicons 
+                  name={isPremium ? "diamond" : "person"} 
+                  size={16} 
+                  color={isPremium ? adventureColors.obsidian : adventureColors.textSecondary} 
+                />
+                <Text style={[
+                  styles.tierBadgeText,
+                  isPremium && styles.tierBadgeTextPremium
+                ]}>
+                  {subscriptionStatus?.tier?.name || 'Free Explorer'}
+                </Text>
+              </View>
+              {subscriptionStatus?.usage && !subscriptionStatus.usage.is_unlimited && (
+                <Text style={styles.usageText}>
+                  {subscriptionStatus.usage.remaining_identifications} IDs remaining today
+                </Text>
+              )}
+              {subscriptionStatus?.usage?.is_unlimited && (
+                <Text style={styles.usageTextUnlimited}>Unlimited identifications</Text>
+              )}
+            </View>
+            
+            {!isPremium && (
+              <TouchableOpacity
+                style={styles.upgradeButton}
+                onPress={() => router.push('/subscription')}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[adventureColors.amberGlow, adventureColors.brassGold]}
+                  style={styles.upgradeGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="rocket" size={16} color={adventureColors.obsidian} />
+                  <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {!isPremium && (
+            <View style={styles.upgradeFeatures}>
+              <Text style={styles.upgradeFeaturesTitle}>Unlock with Pro:</Text>
+              <View style={styles.featuresList}>
+                <View style={styles.featureItem}>
+                  <Ionicons name="infinite" size={14} color={adventureColors.mineralTeal} />
+                  <Text style={styles.featureText}>Unlimited IDs</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Ionicons name="time" size={14} color={adventureColors.cosmicPurple} />
+                  <Text style={styles.featureText}>Deep Time</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Ionicons name="download" size={14} color={adventureColors.brassGold} />
+                  <Text style={styles.featureText}>Export</Text>
+                </View>
+              </View>
             </View>
           )}
         </GlassPanel>

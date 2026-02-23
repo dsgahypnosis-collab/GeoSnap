@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   profileCard: {
     alignItems: 'center',
     padding: spacing.xl,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   avatarGradient: {
     width: 80,
@@ -341,6 +341,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
+    borderWidth: 3,
+    borderColor: adventureColors.brassGold,
     ...shadows.lg,
   },
   nameContainer: {
@@ -352,11 +354,20 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: colors.textPrimary,
   },
-  title: {
-    ...typography.bodySmall,
-    color: colors.specimenGold,
+  explorerTitleContainer: {
+    alignItems: 'center',
     marginTop: spacing.xs,
-    fontWeight: '600',
+  },
+  explorerTitle: {
+    ...adventureTypography.subtitle,
+    color: adventureColors.brassGold,
+    marginTop: spacing.xs,
+  },
+  explorerSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   editNameContainer: {
     width: '100%',
@@ -367,7 +378,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     borderBottomWidth: 2,
-    borderBottomColor: colors.magmaAmber,
+    borderBottomColor: adventureColors.amberGlow,
     paddingBottom: spacing.xs,
   },
   editButtons: {
@@ -384,12 +395,98 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveEditButton: {
-    backgroundColor: colors.emeraldGreen,
+    backgroundColor: adventureColors.success,
   },
   xpContainer: {
     width: '100%',
     marginTop: spacing.lg,
   },
+  // Subscription card styles
+  subscriptionCard: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  tierBadgePremium: {
+    backgroundColor: adventureColors.brassGold,
+  },
+  tierBadgeText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  tierBadgeTextPremium: {
+    color: adventureColors.obsidian,
+  },
+  usageText: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  usageTextUnlimited: {
+    ...typography.caption,
+    color: adventureColors.mineralTeal,
+    marginTop: spacing.xs,
+    fontWeight: '600',
+  },
+  upgradeButton: {
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  upgradeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  upgradeButtonText: {
+    ...typography.body,
+    color: adventureColors.obsidian,
+    fontWeight: '700',
+  },
+  upgradeFeatures: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  upgradeFeaturesTitle: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
+  featuresList: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  featureText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  // Stats grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -425,7 +522,7 @@ const styles = StyleSheet.create({
   },
   achievementCount: {
     ...typography.body,
-    color: colors.magmaAmber,
+    color: adventureColors.amberGlow,
     fontWeight: '600',
   },
   achievementSection: {

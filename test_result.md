@@ -215,63 +215,78 @@ backend:
 
   - task: "Subscription Tiers API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/subscription/tiers returns all subscription tiers and specialist packs. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Returns 3 subscription tiers (Free Explorer, Explorer, Geologist Pro) and 4 specialist packs (gemstone_expert, fossil_hunter, meteorite_finder, crystal_healer) with complete pricing and feature details. Response structure validated with all required fields."
 
   - task: "Subscription Status API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/subscription/status returns current user subscription status, usage limits, and features. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "API working excellently. Returns complete subscription details including current tier (Explorer), status (active), usage limits (25 identifications per day with 25 remaining), purchased packs (gemstone_expert), and feature flags. All required fields present and properly structured."
 
   - task: "Free Trial API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/subscription/start-trial starts 7-day free trial for Explorer tier. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "API working correctly. Successfully started 7-day Explorer trial with proper expiration date. Correctly prevents duplicate trials with 'trial already used' response for subsequent attempts. Trial management and state tracking operational."
 
   - task: "Subscribe API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/subscription/subscribe simulates subscription to paid tier. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Successfully processes subscription to Explorer tier with proper response including tier details, expiration date, and amount charged. Correctly rejects invalid attempts (like subscribing to free tier). Payment simulation and subscription management functional."
 
   - task: "Specialist Pack Purchase API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "POST /api/subscription/purchase-pack handles one-time specialist pack purchases. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "API working excellently. Successfully purchased gemstone_expert pack ($4.99) with proper response including pack details and amount charged. Correctly prevents duplicate purchases with 'already purchased' response. One-time purchase tracking and validation operational."
 
 frontend:
   - task: "Intro/Splash Screen"

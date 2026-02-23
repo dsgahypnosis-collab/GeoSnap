@@ -200,7 +200,7 @@ class BackendTester:
         try:
             params = {
                 "tier_id": tier_id,
-                "is_yearly": is_yearly,
+                "is_yearly": str(is_yearly).lower(),
                 "payment_token": "test_payment_token_12345"
             }
             

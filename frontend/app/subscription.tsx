@@ -1,4 +1,5 @@
-// Subscription/Premium Screen - Upgrade to unlock full geological power
+// Subscription/Premium Screen - Explorer's Arsenal Upgrade
+// Adventure-Cinematic: Unlock the full power of geological discovery
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -14,6 +15,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing, borderRadius, shadows } from '../src/utils/theme';
+import { adventureColors, adventureTypography } from '../src/utils/adventureTheme';
 import { api } from '../src/utils/api';
 import { GlassPanel, ObsidianButton } from '../src/components';
 

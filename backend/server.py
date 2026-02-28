@@ -166,6 +166,7 @@ class IdentifyRequest(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     physical_tests: List[PhysicalTest] = []
+    scan_type: str = "specimen"  # specimen or landscape
 
 class PhysicalTestGuidance(BaseModel):
     test_type: str

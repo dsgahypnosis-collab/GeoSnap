@@ -1138,7 +1138,8 @@ async def identify_specimen(request: IdentifyRequest):
             request.latitude,
             request.longitude,
             request.physical_tests,
-            profile
+            profile,
+            request.scan_type  # Pass scan type
         )
         
         # Increment usage counter

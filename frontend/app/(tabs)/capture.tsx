@@ -1,5 +1,5 @@
-// Capture Screen - ACT I: ENCOUNTER
-// The mineral is not "scanned". It is discovered.
+// GeoSnap Discovery Screen - Adventure Mode!
+// "Point. Snap. Discover. Every rock has a story!"
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -10,8 +10,21 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
-  Platform,
+  ScrollView,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withRepeat,
+  withSequence,
+  interpolate,
+  FadeIn,
+  FadeInUp,
+  FadeInDown,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
@@ -19,20 +32,180 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, typography, spacing, shadows, borderRadius } from '../../src/utils/theme';
+import { colors, spacing, borderRadius } from '../../src/utils/theme';
+import { adventureColors, RARITY_COLORS } from '../../src/utils/adventureTheme';
 import { useAppStore } from '../../src/stores/appStore';
 import { api } from '../../src/utils/api';
-import { GlassPanel, ObsidianButton } from '../../src/components';
 
 const { width, height } = Dimensions.get('window');
 
+// Scan type selector component
+const ScanTypeCard = ({ 
+  type, 
+  icon, 
+  title, 
+  description, 
+  selected, 
+  onPress,
+  color,
+}: {
+  type: string;
+  icon: string;
+  title: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+  color: string;
+}) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <TouchableOpacity 
+      onPress={() => {
+        scale.value = withSequence(
+          withTiming(0.95, { duration: 100 }),
+          withSpring(1)
+        );
+        onPress();
+      }}
+      activeOpacity={0.9}
+    >
+      <Animated.View style={[
+        styles.scanTypeCard,
+        selected && { borderColor: color, borderWidth: 2 },
+        animatedStyle,
+      ]}>
+        <LinearGradient
+          colors={selected ? [color + '30', 'transparent'] : ['transparent', 'transparent']}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.scanTypeIcon, { backgroundColor: color + '30' }]}>
+          <Ionicons name={icon as any} size={28} color={color} />
+        </View>
+        <Text style={[styles.scanTypeTitle, selected && { color }]}>{title}</Text>
+        <Text style={styles.scanTypeDesc}>{description}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
+// Animated scanning overlay
+const ScanningOverlay = ({ isActive }: { isActive: boolean }) => {
+  const scanY = useSharedValue(0);
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (isActive) {
+      scanY.value = withRepeat(
+        withTiming(1, { duration: 2000 }),
+        -1,
+        true
+      );
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 500 }),
+          withTiming(1, { duration: 500 })
+        ),
+        -1,
+        true
+      );
+    }
+  }, [isActive]);
+
+  const scanLineStyle = useAnimatedStyle(() => ({
+    top: `${interpolate(scanY.value, [0, 1], [10, 90])}%`,
+  }));
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
+  if (!isActive) return null;
+
+  return (
+    <View style={styles.scanningOverlay}>
+      {/* Corner brackets */}
+      <View style={[styles.bracket, styles.bracketTL]} />
+      <View style={[styles.bracket, styles.bracketTR]} />
+      <View style={[styles.bracket, styles.bracketBL]} />
+      <View style={[styles.bracket, styles.bracketBR]} />
+      
+      {/* Scan line */}
+      <Animated.View style={[styles.scanLine, scanLineStyle]}>
+        <LinearGradient
+          colors={['transparent', adventureColors.auroraBlue, 'transparent']}
+          style={styles.scanLineGradient}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+        />
+      </Animated.View>
+
+      {/* Center pulse */}
+      <Animated.View style={[styles.centerPulse, pulseStyle]}>
+        <View style={styles.centerDot} />
+      </Animated.View>
+
+      {/* Status text */}
+      <View style={styles.scanStatus}>
+        <ActivityIndicator color={adventureColors.auroraBlue} />
+        <Text style={styles.scanStatusText}>ANALYZING...</Text>
+      </View>
+    </View>
+  );
+};
+
+// Result animation
+const DiscoveryAnimation = ({ onComplete }: { onComplete: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Animated.View 
+      style={styles.discoveryOverlay}
+      entering={ZoomIn.duration(300)}
+    >
+      <LinearGradient
+        colors={['rgba(0,0,0,0.9)', 'rgba(0,0,0,0.95)']}
+        style={StyleSheet.absoluteFill}
+      />
+      <Animated.View entering={ZoomIn.delay(200).duration(500)}>
+        <LinearGradient
+          colors={[adventureColors.treasureGold, adventureColors.amberGlow]}
+          style={styles.discoveryIcon}
+        >
+          <Ionicons name="sparkles" size={48} color={adventureColors.obsidian} />
+        </LinearGradient>
+      </Animated.View>
+      <Animated.Text 
+        style={styles.discoveryText}
+        entering={FadeInUp.delay(400).duration(400)}
+      >
+        DISCOVERY MADE!
+      </Animated.Text>
+      <Animated.Text 
+        style={styles.discoverySubtext}
+        entering={FadeInUp.delay(600).duration(400)}
+      >
+        Preparing your results...
+      </Animated.Text>
+    </Animated.View>
+  );
+};
+
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [facing, setFacing] = useState<CameraType>('back');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showDiscovery, setShowDiscovery] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [scanType, setScanType] = useState<'specimen' | 'landscape'>('specimen');
   const cameraRef = useRef<CameraView>(null);
   
   const { setCurrentImage, setCurrentSpecimen, fetchSpecimens, fetchProfile } = useAppStore();
@@ -43,7 +216,6 @@ export default function CaptureScreen() {
 
   const getLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    setLocationPermission(status === 'granted');
     if (status === 'granted') {
       try {
         const loc = await Location.getCurrentPositionAsync({});
@@ -86,7 +258,7 @@ export default function CaptureScreen() {
     }
   };
 
-  const analyzeSpecimen = async () => {
+  const analyzeImage = async () => {
     if (!capturedImage) return;
 
     setIsAnalyzing(true);
@@ -95,7 +267,8 @@ export default function CaptureScreen() {
         capturedImage,
         location?.latitude,
         location?.longitude,
-        []
+        [],
+        scanType // Pass the scan type to API
       );
       
       setCurrentSpecimen(specimen);
@@ -103,29 +276,39 @@ export default function CaptureScreen() {
       await fetchSpecimens();
       await fetchProfile();
       
-      // Navigate to result screen
-      router.push(`/specimen/${specimen.id}`);
+      // Show discovery animation
+      setIsAnalyzing(false);
+      setShowDiscovery(true);
     } catch (error) {
       console.error('Analysis error:', error);
-      Alert.alert(
-        'Analysis Failed',
-        'Could not identify the specimen. Please try again with a clearer image.'
-      );
-    } finally {
       setIsAnalyzing(false);
+      Alert.alert(
+        '🔍 Analysis Failed',
+        'Could not identify the image. Try a clearer photo or different angle!',
+        [{ text: 'Try Again', style: 'default' }]
+      );
     }
+  };
+
+  const handleDiscoveryComplete = () => {
+    const { currentSpecimen } = useAppStore.getState();
+    if (currentSpecimen) {
+      router.push(`/specimen/${currentSpecimen.id}`);
+    }
+    setShowDiscovery(false);
+    setCapturedImage(null);
   };
 
   const resetCapture = () => {
     setCapturedImage(null);
   };
 
-  // Permission request screen
+  // Permission screens
   if (!permission) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <ActivityIndicator size="large" color={colors.magmaAmber} />
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={adventureColors.amberGlow} />
         </View>
       </SafeAreaView>
     );
@@ -134,275 +317,435 @@ export default function CaptureScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <GlassPanel style={styles.permissionCard}>
-            <Ionicons name="camera-outline" size={64} color={colors.magmaAmber} />
-            <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <LinearGradient
+          colors={[adventureColors.obsidian, '#1a1a1a', adventureColors.obsidian]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.centerContent}>
+          <Animated.View 
+            style={styles.permissionCard}
+            entering={FadeInUp.duration(600)}
+          >
+            <LinearGradient
+              colors={[adventureColors.amberGlow, adventureColors.treasureGold]}
+              style={styles.permissionIconBg}
+            >
+              <Ionicons name="camera" size={48} color={adventureColors.obsidian} />
+            </LinearGradient>
+            <Text style={styles.permissionTitle}>📸 Camera Access Needed</Text>
             <Text style={styles.permissionText}>
-              GeoSnap needs camera access to capture and analyze geological specimens.
+              GeoSnap needs your camera to discover and identify geological wonders!
             </Text>
-            <ObsidianButton
-              title="Grant Camera Access"
+            <TouchableOpacity 
+              style={styles.permissionButton}
               onPress={requestPermission}
-              icon={<Ionicons name="camera" size={18} color={colors.textPrimary} />}
-            />
-          </GlassPanel>
+            >
+              <LinearGradient
+                colors={[adventureColors.amberGlow, adventureColors.treasureGold]}
+                style={styles.permissionButtonGradient}
+              >
+                <Ionicons name="camera" size={20} color={adventureColors.obsidian} />
+                <Text style={styles.permissionButtonText}>Enable Camera</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Captured image review
+  // Image review screen
   if (capturedImage) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
+        <LinearGradient
+          colors={[adventureColors.obsidian, '#0f0f12']}
+          style={StyleSheet.absoluteFill}
+        />
+        
+        {showDiscovery && <DiscoveryAnimation onComplete={handleDiscoveryComplete} />}
+        
         <View style={styles.reviewContainer}>
           {/* Header */}
-          <View style={styles.reviewHeader}>
+          <Animated.View 
+            style={styles.reviewHeader}
+            entering={FadeInDown.duration(400)}
+          >
             <TouchableOpacity onPress={resetCapture} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.reviewTitle}>Review Specimen</Text>
+            <Text style={styles.reviewTitle}>
+              {scanType === 'specimen' ? '🔬 Specimen Captured' : '🏔️ Landscape Captured'}
+            </Text>
             <View style={{ width: 40 }} />
-          </View>
+          </Animated.View>
 
-          {/* Image Preview */}
-          <View style={styles.imageContainer}>
+          {/* Image preview */}
+          <Animated.View 
+            style={styles.imagePreview}
+            entering={ZoomIn.duration(500).delay(100)}
+          >
             <Image
               source={{ uri: `data:image/jpeg;base64,${capturedImage}` }}
               style={styles.previewImage}
-              resizeMode="contain"
+              resizeMode="cover"
             />
-            {/* Scanning overlay during analysis */}
-            {isAnalyzing && (
-              <View style={styles.scanOverlay}>
-                <LinearGradient
-                  colors={['transparent', 'rgba(255,107,53,0.3)', 'transparent']}
-                  style={styles.scanLine}
-                />
-                <Text style={styles.scanText}>Analyzing specimen...</Text>
-              </View>
-            )}
-          </View>
+            <ScanningOverlay isActive={isAnalyzing} />
+          </Animated.View>
 
-          {/* Location Info */}
-          {location && (
-            <GlassPanel style={styles.locationCard} variant="subtle">
-              <Ionicons name="location" size={16} color={colors.crystalTeal} />
-              <Text style={styles.locationText}>
-                {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-              </Text>
-            </GlassPanel>
-          )}
+          {/* Scan type indicator */}
+          <Animated.View 
+            style={styles.scanTypeBadge}
+            entering={FadeInUp.duration(400).delay(200)}
+          >
+            <Ionicons 
+              name={scanType === 'specimen' ? 'diamond' : 'image'} 
+              size={16} 
+              color={scanType === 'specimen' ? adventureColors.mineralTeal : adventureColors.sapphireBlue} 
+            />
+            <Text style={styles.scanTypeBadgeText}>
+              {scanType === 'specimen' ? 'Specimen Analysis' : 'Landscape Analysis'}
+            </Text>
+          </Animated.View>
 
-          {/* Action Buttons */}
-          <View style={styles.reviewActions}>
-            <ObsidianButton
-              title="Retake"
+          {/* Action buttons */}
+          <Animated.View 
+            style={styles.actionButtons}
+            entering={FadeInUp.duration(400).delay(300)}
+          >
+            <TouchableOpacity 
+              style={styles.retakeButton}
               onPress={resetCapture}
-              variant="secondary"
               disabled={isAnalyzing}
-              icon={<Ionicons name="refresh" size={18} color={colors.textSecondary} />}
-            />
-            <ObsidianButton
-              title={isAnalyzing ? 'Analyzing...' : 'Identify Specimen'}
-              onPress={analyzeSpecimen}
-              loading={isAnalyzing}
+            >
+              <Ionicons name="refresh" size={24} color={colors.textSecondary} />
+              <Text style={styles.retakeText}>Retake</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.analyzeButton, isAnalyzing && styles.analyzeButtonDisabled]}
+              onPress={analyzeImage}
               disabled={isAnalyzing}
-              icon={!isAnalyzing && <Ionicons name="scan" size={18} color={colors.textPrimary} />}
-            />
-          </View>
+            >
+              <LinearGradient
+                colors={isAnalyzing 
+                  ? [adventureColors.textMuted, adventureColors.textMuted]
+                  : [adventureColors.amberGlow, adventureColors.treasureGold]
+                }
+                style={styles.analyzeButtonGradient}
+              >
+                {isAnalyzing ? (
+                  <ActivityIndicator color={adventureColors.obsidian} />
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={24} color={adventureColors.obsidian} />
+                    <Text style={styles.analyzeText}>✨ Identify!</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Fun tip */}
+          <Animated.Text 
+            style={styles.funTip}
+            entering={FadeIn.duration(600).delay(500)}
+          >
+            💡 Tip: Clear, well-lit photos give the best results!
+          </Animated.Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Camera View
+  // Camera view
   return (
-    <View style={styles.cameraContainer}>
-      <CameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing={facing}
-      >
-        {/* Top Controls */}
-        <SafeAreaView style={styles.cameraOverlay} edges={['top']}>
-          <View style={styles.topControls}>
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.cameraContainer}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing={facing}
+        >
+          {/* Overlay UI */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.6)', 'transparent', 'transparent', 'rgba(0,0,0,0.8)']}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Header */}
+          <Animated.View 
+            style={styles.cameraHeader}
+            entering={FadeInDown.duration(400)}
+          >
+            <Text style={styles.cameraTitle}>🎯 Point & Discover</Text>
+            <Text style={styles.cameraSubtitle}>
+              {scanType === 'specimen' 
+                ? 'Center a rock, mineral, or crystal'
+                : 'Capture a geological landscape'
+              }
+            </Text>
+          </Animated.View>
+
+          {/* Scan type selector */}
+          <Animated.View 
+            style={styles.scanTypeSelector}
+            entering={FadeInUp.duration(400).delay(100)}
+          >
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.scanTypeScroll}
             >
-              <Ionicons name="camera-reverse" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
+              <ScanTypeCard
+                type="specimen"
+                icon="diamond"
+                title="🔬 Specimen"
+                description="Rocks & Minerals"
+                selected={scanType === 'specimen'}
+                onPress={() => setScanType('specimen')}
+                color={adventureColors.mineralTeal}
+              />
+              <ScanTypeCard
+                type="landscape"
+                icon="image"
+                title="🏔️ Landscape"
+                description="Geological Features"
+                selected={scanType === 'landscape'}
+                onPress={() => setScanType('landscape')}
+                color={adventureColors.sapphireBlue}
+              />
+            </ScrollView>
+          </Animated.View>
+
+          {/* Camera guide frame */}
+          <View style={styles.guideFrame}>
+            <View style={[styles.guideCorner, styles.guideTL]} />
+            <View style={[styles.guideCorner, styles.guideTR]} />
+            <View style={[styles.guideCorner, styles.guideBL]} />
+            <View style={[styles.guideCorner, styles.guideBR]} />
           </View>
 
-          {/* Center Guide */}
-          <View style={styles.guideContainer}>
-            <View style={styles.guideFrame}>
-              <View style={[styles.guideCorner, styles.topLeft]} />
-              <View style={[styles.guideCorner, styles.topRight]} />
-              <View style={[styles.guideCorner, styles.bottomLeft]} />
-              <View style={[styles.guideCorner, styles.bottomRight]} />
-            </View>
-            <Text style={styles.guideText}>Position specimen within frame</Text>
-          </View>
-
-          {/* Bottom Controls */}
-          <View style={styles.bottomControls}>
-            <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+          {/* Bottom controls */}
+          <Animated.View 
+            style={styles.cameraControls}
+            entering={FadeInUp.duration(400).delay(200)}
+          >
+            {/* Gallery button */}
+            <TouchableOpacity 
+              style={styles.galleryButton}
+              onPress={pickImage}
+            >
               <Ionicons name="images" size={28} color={colors.textPrimary} />
+              <Text style={styles.controlLabel}>Gallery</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+            {/* Capture button */}
+            <TouchableOpacity 
+              style={styles.captureButton}
+              onPress={takePicture}
+            >
               <LinearGradient
-                colors={[colors.magmaAmber, '#D45A27']}
-                style={styles.captureGradient}
+                colors={[adventureColors.amberGlow, adventureColors.treasureGold]}
+                style={styles.captureButtonInner}
               >
-                <View style={styles.captureInner} />
+                <Ionicons name="scan" size={36} color={adventureColors.obsidian} />
               </LinearGradient>
             </TouchableOpacity>
 
-            <View style={{ width: 48 }} />
-          </View>
-        </SafeAreaView>
-      </CameraView>
-    </View>
+            {/* Flip camera */}
+            <TouchableOpacity 
+              style={styles.flipButton}
+              onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}
+            >
+              <Ionicons name="camera-reverse" size={28} color={colors.textPrimary} />
+              <Text style={styles.controlLabel}>Flip</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </CameraView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.obsidian,
+    backgroundColor: adventureColors.obsidian,
   },
-  permissionContainer: {
+  centerContent: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: spacing.lg,
   },
+  // Permission styles
   permissionCard: {
+    backgroundColor: adventureColors.glassPanel,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
     alignItems: 'center',
-    padding: spacing.xxl,
     gap: spacing.md,
-    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: adventureColors.glassBorder,
+    width: '100%',
+    maxWidth: 340,
+  },
+  permissionIconBg: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   permissionTitle: {
-    ...typography.h2,
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
   },
   permissionText: {
-    ...typography.body,
+    fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    lineHeight: 22,
   },
+  permissionButton: {
+    marginTop: spacing.md,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+  },
+  permissionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    gap: 10,
+  },
+  permissionButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: adventureColors.obsidian,
+  },
+  // Camera styles
   cameraContainer: {
     flex: 1,
   },
   camera: {
     flex: 1,
   },
-  cameraOverlay: {
-    flex: 1,
-    justifyContent: 'space-between',
+  cameraHeader: {
+    paddingTop: 20,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
   },
-  topControls: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  cameraTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  cameraSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  // Scan type selector
+  scanTypeSelector: {
+    marginTop: spacing.md,
+  },
+  scanTypeScroll: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  scanTypeCard: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
+    alignItems: 'center',
+    width: 140,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  controlButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  scanTypeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
-  guideContainer: {
-    alignItems: 'center',
-    gap: spacing.md,
+  scanTypeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
+  scanTypeDesc: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  // Guide frame
   guideFrame: {
-    width: width * 0.75,
-    height: width * 0.75,
-    position: 'relative',
+    position: 'absolute',
+    top: '25%',
+    left: '10%',
+    right: '10%',
+    bottom: '30%',
   },
   guideCorner: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderColor: colors.magmaAmber,
+    width: 30,
+    height: 30,
+    borderColor: adventureColors.amberGlow,
   },
-  topLeft: {
-    top: 0,
+  guideTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 },
+  guideTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
+  guideBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
+  guideBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
+  // Camera controls
+  cameraControls: {
+    position: 'absolute',
+    bottom: 40,
     left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-  },
-  topRight: {
-    top: 0,
     right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-  },
-  guideText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  bottomControls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: spacing.lg,
   },
   galleryButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: spacing.sm,
+  },
+  flipButton: {
+    alignItems: 'center',
+    padding: spacing.sm,
+  },
+  controlLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   captureButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    padding: 4,
     backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 4,
+    borderWidth: 3,
+    borderColor: adventureColors.amberGlow,
   },
-  captureGradient: {
+  captureButtonInner: {
     flex: 1,
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  captureInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.textPrimary,
-  },
+  // Review styles
   reviewContainer: {
     flex: 1,
     padding: spacing.md,
@@ -417,54 +760,171 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.glassPanel,
+    backgroundColor: adventureColors.glassPanel,
     alignItems: 'center',
     justifyContent: 'center',
   },
   reviewTitle: {
-    ...typography.h3,
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
-  imageContainer: {
+  imagePreview: {
     flex: 1,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    backgroundColor: colors.caveShadow,
     marginBottom: spacing.md,
   },
   previewImage: {
-    flex: 1,
     width: '100%',
+    height: '100%',
   },
-  scanOverlay: {
+  scanTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: adventureColors.glassPanel,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  scanTypeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  retakeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: adventureColors.glassPanel,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.xs,
+  },
+  retakeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  analyzeButton: {
+    flex: 2,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  analyzeButtonDisabled: {
+    opacity: 0.7,
+  },
+  analyzeButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  analyzeText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: adventureColors.obsidian,
+  },
+  funTip: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  // Scanning overlay
+  scanningOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  bracket: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderColor: adventureColors.auroraBlue,
+  },
+  bracketTL: { top: 20, left: 20, borderTopWidth: 3, borderLeftWidth: 3 },
+  bracketTR: { top: 20, right: 20, borderTopWidth: 3, borderRightWidth: 3 },
+  bracketBL: { bottom: 20, left: 20, borderBottomWidth: 3, borderLeftWidth: 3 },
+  bracketBR: { bottom: 20, right: 20, borderBottomWidth: 3, borderRightWidth: 3 },
+  scanLine: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 3,
+  },
+  scanLineGradient: {
+    flex: 1,
+  },
+  centerPulse: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 60,
+    height: 60,
+    marginLeft: -30,
+    marginTop: -30,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: adventureColors.auroraBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scanLine: {
-    width: '100%',
-    height: 100,
+  centerDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: adventureColors.auroraBlue,
+  },
+  scanStatus: {
     position: 'absolute',
-  },
-  scanText: {
-    ...typography.body,
-    color: colors.magmaAmber,
-    fontWeight: '600',
-  },
-  locationCard: {
+    bottom: 40,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
   },
-  locationText: {
-    ...typography.bodySmall,
+  scanStatusText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: adventureColors.auroraBlue,
+    letterSpacing: 2,
+  },
+  // Discovery animation
+  discoveryOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discoveryIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  discoveryText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: adventureColors.treasureGold,
+    letterSpacing: 3,
+  },
+  discoverySubtext: {
+    fontSize: 16,
     color: colors.textSecondary,
-  },
-  reviewActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
+    marginTop: spacing.sm,
   },
 });

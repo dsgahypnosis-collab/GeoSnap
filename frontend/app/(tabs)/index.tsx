@@ -195,6 +195,31 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Go Pro Banner - Monetization */}
+        <TouchableOpacity 
+          style={styles.proBanner}
+          onPress={() => router.push('/subscription')}
+          activeOpacity={0.9}
+        >
+          <LinearGradient
+            colors={['#1a1a2e', '#16213e', '#1a1a2e']}
+            style={styles.proBannerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.proBannerIcon}>
+              <Ionicons name="rocket" size={24} color="#FFD700" />
+            </View>
+            <View style={styles.proBannerContent}>
+              <Text style={styles.proBannerTitle}>🚀 Unlock Pro Features</Text>
+              <Text style={styles.proBannerText}>Unlimited IDs • Deep Time • Offline Mode</Text>
+            </View>
+            <View style={styles.proBannerArrow}>
+              <Ionicons name="chevron-forward" size={20} color="#FFD700" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Recent Discoveries */}
         {recentSpecimens.length > 0 && (
           <View style={styles.section}>

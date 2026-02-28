@@ -279,14 +279,30 @@ export default function CaptureScreen() {
       // Show discovery animation
       setIsAnalyzing(false);
       setShowDiscovery(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Analysis error:', error);
       setIsAnalyzing(false);
-      Alert.alert(
-        '🔍 Analysis Failed',
-        'Could not identify the image. Try a clearer photo or different angle!',
-        [{ text: 'Try Again', style: 'default' }]
-      );
+      
+      // Check if it's a subscription limit error
+      if (error?.message?.includes('limit') || error?.message?.includes('upgrade')) {
+        Alert.alert(
+          '🔒 Daily Limit Reached',
+          'You\'ve used all your free identifications today. Upgrade to Pro for unlimited discoveries!',
+          [
+            { text: 'Maybe Later', style: 'cancel' },
+            { 
+              text: '✨ Go Pro', 
+              onPress: () => router.push({ pathname: '/subscription', params: { reason: 'limit', limit: '5' }})
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          '🔍 Analysis Failed',
+          'Could not identify the image. Try a clearer photo or different angle!',
+          [{ text: 'Try Again', style: 'default' }]
+        );
+      }
     }
   };
 

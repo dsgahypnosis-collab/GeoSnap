@@ -675,7 +675,23 @@ You must respond in valid JSON format with this exact structure:
     }
 }"""
         
-        user_prompt = f"""Analyze this rock/mineral/gemstone specimen image and provide a detailed identification.
+        if scan_type == "landscape":
+            user_prompt = f"""Analyze this geological landscape photograph and identify the features, formations, and geological history.
+
+{test_context}
+{location_context}
+{user_context}
+
+Examine carefully:
+- Rock types visible in the landscape
+- Geological structures (layers, folds, faults)
+- Erosion patterns and surface features
+- Mountains, cliffs, canyons, or other formations
+- Signs of past geological events
+
+Provide your analysis with honest confidence levels. Include fascinating facts about how this landscape formed over millions of years!"""
+        else:
+            user_prompt = f"""Analyze this rock/mineral/gemstone specimen image and provide a detailed identification.
 
 {test_context}
 {location_context}

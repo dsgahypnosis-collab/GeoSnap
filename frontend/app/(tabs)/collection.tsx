@@ -21,7 +21,6 @@ import Animated, {
   withSpring,
   withDelay,
   interpolate,
-  Easing,
   FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';

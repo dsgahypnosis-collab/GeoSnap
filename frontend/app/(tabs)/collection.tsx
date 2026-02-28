@@ -66,8 +66,8 @@ const FloatingSpecimenCard = ({
       delay,
       withRepeat(
         withSequence(
-          withTiming(10, { duration, easing: Easing.inOut(Easing.sine) }),
-          withTiming(-10, { duration, easing: Easing.inOut(Easing.sine) })
+          withTiming(10, { duration }),
+          withTiming(-10, { duration })
         ),
         -1,
         true
@@ -78,8 +78,8 @@ const FloatingSpecimenCard = ({
       delay + 500,
       withRepeat(
         withSequence(
-          withTiming(5, { duration: duration * 1.2, easing: Easing.inOut(Easing.sine) }),
-          withTiming(-5, { duration: duration * 1.2, easing: Easing.inOut(Easing.sine) })
+          withTiming(5, { duration: duration * 1.2 }),
+          withTiming(-5, { duration: duration * 1.2 })
         ),
         -1,
         true

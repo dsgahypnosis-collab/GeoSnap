@@ -516,7 +516,7 @@ async def update_user_preferences_from_activity(profile_id: str, activity_type: 
 
 # ==================== AI IDENTIFICATION ====================
 
-async def identify_specimen_with_ai(image_base64: str, latitude: Optional[float], longitude: Optional[float], physical_tests: List[PhysicalTest], user_profile: Optional[UserProfile] = None) -> tuple[SpecimenIdentification, SpecimenData]:
+async def identify_specimen_with_ai(image_base64: str, latitude: Optional[float], longitude: Optional[float], physical_tests: List[PhysicalTest], user_profile: Optional[UserProfile] = None, scan_type: str = "specimen") -> tuple[SpecimenIdentification, SpecimenData]:
     """Use OpenAI GPT-4o to identify the specimen with personalized context"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent

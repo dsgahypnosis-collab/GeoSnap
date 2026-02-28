@@ -60,16 +60,23 @@ class ApiClient {
     return this.request('/health');
   }
 
-  // Identification
+  // Identification - supports both specimen and landscape
   async identifySpecimen(
     image_base64: string,
     latitude?: number,
     longitude?: number,
-    physical_tests: PhysicalTest[] = []
+    physical_tests: PhysicalTest[] = [],
+    scan_type: 'specimen' | 'landscape' = 'specimen'
   ): Promise<Specimen> {
     return this.request('/identify', {
       method: 'POST',
-      body: JSON.stringify({ image_base64, latitude, longitude, physical_tests }),
+      body: JSON.stringify({ 
+        image_base64, 
+        latitude, 
+        longitude, 
+        physical_tests,
+        scan_type 
+      }),
     });
   }
 

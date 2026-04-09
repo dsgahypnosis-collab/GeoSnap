@@ -153,6 +153,96 @@ backend:
         agent: "main"
         comment: "GET /api/physical-test-guidance/{type} returns hardness, streak, luster, etc guidance"
 
+  - task: "Lab Mohs Scale API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/lab/mohs-scale returns 10 minerals"
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Returns 10 minerals with complete data structure including value, mineral name, test description, color, and examples. Response format: {'scale': [array of 10 minerals]}. All required fields present and properly structured."
+
+  - task: "Lab Luster Types API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/lab/luster-types returns 8 luster types"
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Returns 8 luster types (Vitreous, Metallic, Pearly, Silky, Waxy, Resinous, Adamantine, Earthy/Dull) with complete descriptions, examples, icons, and colors. Response format: {'types': [array of 8 luster types]}. All required fields present."
+
+  - task: "Lab Crystal Systems API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/lab/crystal-systems returns 6 crystal systems"
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Returns 6 crystal systems (Cubic, Tetragonal, Orthorhombic, Hexagonal, Monoclinic, Triclinic) with axes descriptions, examples, shapes, and colors. Response format: {'systems': [array of 6 crystal systems]}. All required fields present."
+
+  - task: "Lab Quiz API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/lab/quiz returns random questions. POST /api/lab/quiz/submit validates and awards XP"
+      - working: true
+        agent: "testing"
+        comment: "All quiz endpoints working perfectly. GET /api/lab/quiz?count=5 returns 5 questions, category filtering (?category=identification) works, difficulty filtering (?difficulty=hard) works. POST /api/lab/quiz/submit correctly validates answers: correct answer (q1, index 1) awards 10 XP, incorrect answer (q1, index 0) awards 0 XP. Response format: {'questions': [array], 'total_available': number}."
+
+  - task: "Lab Mohs Test API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "POST /api/lab/mohs-test simulates hardness test and awards XP"
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. POST /api/lab/mohs-test?estimated_hardness=7 correctly identifies nearest mineral (Quartz for hardness 7), returns common objects for comparison, and awards 10 XP. Response includes complete mineral data with value, name, test description, color, and examples."
+
+  - task: "Mineral of the Day API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/lab/mineral-of-the-day returns featured mineral"
+      - working: true
+        agent: "testing"
+        comment: "API working perfectly. Returns featured mineral (Pyrite) with complete data including name, formula (FeS₂), hardness, crystal system, fun fact, rarity, color, and icon. Response format: {'mineral': {complete mineral data}}. All required fields present and properly structured."
+
   - task: "Specimen Identification API (AI)"
     implemented: true
     working: true
@@ -430,3 +520,7 @@ agent_communication:
     message: "Added subscription/monetization system. New backend endpoints: GET /api/subscription/tiers, GET /api/subscription/status, POST /api/subscription/start-trial, POST /api/subscription/subscribe, POST /api/subscription/purchase-pack. Frontend: Updated Profile screen with subscription status display and Upgrade button, Subscription screen with adventure-themed UI. Please test new subscription APIs."
   - agent: "testing"
     message: "All 5 subscription APIs tested and working perfectly! GET /api/subscription/tiers returns 3 tiers + 4 specialist packs, GET /api/subscription/status shows complete user subscription details, POST /api/subscription/start-trial successfully manages 7-day trials, POST /api/subscription/subscribe handles tier upgrades with proper validation, POST /api/subscription/purchase-pack manages specialist pack purchases. Subscription system, usage limits, trial management, and purchase tracking all operational. Note: AI identification endpoint has Cloudflare routing issues (520 error) but subscription system itself is fully functional."
+  - agent: "main"
+    message: "Added Interactive Lab & Quiz system. New backend endpoints: GET /api/lab/mohs-scale (returns Mohs hardness reference data), GET /api/lab/luster-types (returns 8 luster types), GET /api/lab/crystal-systems (returns 6 crystal systems), GET /api/lab/quiz (returns random quiz questions with filters for category/difficulty), POST /api/lab/quiz/submit (validates answers, awards XP), POST /api/lab/mohs-test (simulates hardness test, awards XP), GET /api/lab/mineral-of-the-day (featured mineral). Frontend: New Lab tab with 5 interactive tools, enhanced Profile with expedition quests. Please test all new Lab API endpoints."
+  - agent: "testing"
+    message: "All 6 Lab API endpoints tested and working perfectly! 100% success rate (13/13 tests passed). Core APIs (health, profile, leaderboard) confirmed working. Lab endpoints: GET /api/lab/mohs-scale returns 10 minerals with complete data, GET /api/lab/luster-types returns 8 luster types, GET /api/lab/crystal-systems returns 6 crystal systems, GET /api/lab/quiz supports count/category/difficulty filtering, POST /api/lab/quiz/submit correctly validates answers and awards XP, POST /api/lab/mohs-test identifies nearest minerals and awards XP, GET /api/lab/mineral-of-the-day returns featured mineral. All response formats properly structured with required fields. Interactive Lab system fully operational and ready for production."

@@ -207,6 +207,42 @@ class ApiClient {
   async restorePurchases(): Promise<any> {
     return this.request('/subscription/restore', { method: 'POST' });
   }
+
+  // Lab Tests & Quiz
+  async getMohsScale(): Promise<any> {
+    return this.request('/lab/mohs-scale');
+  }
+
+  async getLusterTypes(): Promise<any> {
+    return this.request('/lab/luster-types');
+  }
+
+  async getCrystalSystems(): Promise<any> {
+    return this.request('/lab/crystal-systems');
+  }
+
+  async getQuizQuestions(count: number = 5, category?: string, difficulty?: string): Promise<any> {
+    const params = new URLSearchParams({ count: count.toString() });
+    if (category) params.append('category', category);
+    if (difficulty) params.append('difficulty', difficulty);
+    return this.request(`/lab/quiz?${params.toString()}`);
+  }
+
+  async submitQuizAnswer(questionId: string, answerIndex: number): Promise<any> {
+    return this.request(`/lab/quiz/submit?question_id=${encodeURIComponent(questionId)}&answer_index=${answerIndex}`, {
+      method: 'POST',
+    });
+  }
+
+  async performMohsTest(estimatedHardness: number, specimenId?: string): Promise<any> {
+    const params = new URLSearchParams({ estimated_hardness: estimatedHardness.toString() });
+    if (specimenId) params.append('specimen_id', specimenId);
+    return this.request(`/lab/mohs-test?${params.toString()}`, { method: 'POST' });
+  }
+
+  async getMineralOfTheDay(): Promise<any> {
+    return this.request('/lab/mineral-of-the-day');
+  }
 }
 
 export const api = new ApiClient();

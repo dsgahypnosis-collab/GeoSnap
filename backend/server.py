@@ -1592,6 +1592,284 @@ Keep responses conversational but informative. Use geological terminology approp
         logging.error(f"Strata error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ---------- Lab Tests & Quiz System ----------
+
+MOHS_SCALE = [
+    {"value": 1, "mineral": "Talc", "test": "Scratched by fingernail", "color": "#4CAF50", "example": "Soapstone, baby powder"},
+    {"value": 2, "mineral": "Gypsum", "test": "Scratched by fingernail", "color": "#66BB6A", "example": "Plaster, drywall"},
+    {"value": 3, "mineral": "Calcite", "test": "Scratched by copper coin", "color": "#FFC107", "example": "Marble, limestone"},
+    {"value": 4, "mineral": "Fluorite", "test": "Scratched by steel knife easily", "color": "#FF9800", "example": "Decorative stone"},
+    {"value": 5, "mineral": "Apatite", "test": "Scratched by steel knife with difficulty", "color": "#FF5722", "example": "Tooth enamel"},
+    {"value": 6, "mineral": "Orthoclase", "test": "Scratches glass", "color": "#E91E63", "example": "Feldspar, granite"},
+    {"value": 7, "mineral": "Quartz", "test": "Scratches glass easily", "color": "#9C27B0", "example": "Amethyst, citrine"},
+    {"value": 8, "mineral": "Topaz", "test": "Scratches quartz", "color": "#673AB7", "example": "Blue topaz"},
+    {"value": 9, "mineral": "Corundum", "test": "Scratches topaz", "color": "#3F51B5", "example": "Ruby, sapphire"},
+    {"value": 10, "mineral": "Diamond", "test": "Scratches everything", "color": "#2196F3", "example": "Diamond jewelry"},
+]
+
+LUSTER_TYPES = [
+    {"type": "Vitreous", "description": "Glass-like, bright and reflective", "icon": "sparkles", "example": "Quartz, feldspar, olivine", "color": "#00BCD4"},
+    {"type": "Metallic", "description": "Shiny like polished metal", "icon": "hardware-chip", "example": "Pyrite, galena, magnetite", "color": "#FFD700"},
+    {"type": "Pearly", "description": "Soft, iridescent glow like pearl", "icon": "moon", "example": "Muscovite, talc", "color": "#E8EAF6"},
+    {"type": "Silky", "description": "Smooth, silk-like sheen from fibrous crystals", "icon": "water", "example": "Satin spar gypsum, tiger's eye", "color": "#FFF3E0"},
+    {"type": "Waxy", "description": "Smooth but not glossy, like candle wax", "icon": "flame", "example": "Jade, chalcedony", "color": "#A5D6A7"},
+    {"type": "Resinous", "description": "Like tree resin or plastic", "icon": "leaf", "example": "Amber, sphalerite", "color": "#FFAB91"},
+    {"type": "Adamantine", "description": "Brilliant, diamond-like sparkle", "icon": "diamond", "example": "Diamond, cerussite, zircon", "color": "#B3E5FC"},
+    {"type": "Earthy/Dull", "description": "No shine, rough and matte surface", "icon": "earth", "example": "Kaolinite, bauxite", "color": "#8D6E63"},
+]
+
+QUIZ_QUESTIONS = [
+    {
+        "id": "q1", "category": "identification",
+        "question": "What mineral is commonly known as 'Fool's Gold'?",
+        "options": ["Galena", "Pyrite", "Chalcopyrite", "Gold"],
+        "correct": 1, "explanation": "Pyrite's metallic yellow appearance closely resembles gold, earning it the nickname 'Fool's Gold'. Unlike real gold, pyrite is brittle and has a greenish-black streak.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q2", "category": "properties",
+        "question": "What is the hardest known natural mineral?",
+        "options": ["Corundum", "Topaz", "Diamond", "Quartz"],
+        "correct": 2, "explanation": "Diamond (Mohs 10) is the hardest known natural mineral. It's made of carbon atoms arranged in a crystal structure called diamond cubic.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q3", "category": "geology",
+        "question": "Which type of rock forms from cooled magma or lava?",
+        "options": ["Sedimentary", "Metamorphic", "Igneous", "Fossiliferous"],
+        "correct": 2, "explanation": "Igneous rocks form when molten rock (magma underground, lava on surface) cools and solidifies. Examples include granite, basalt, and obsidian.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q4", "category": "identification",
+        "question": "What gives amethyst its distinctive purple color?",
+        "options": ["Manganese", "Iron impurities", "Cobalt", "Chromium"],
+        "correct": 1, "explanation": "Amethyst is a variety of quartz colored purple by iron impurities and natural irradiation. The deeper the iron content, the more intense the purple.",
+        "difficulty": "medium", "xp": 15
+    },
+    {
+        "id": "q5", "category": "geology",
+        "question": "How old is the Earth approximately?",
+        "options": ["1.5 billion years", "4.5 billion years", "6.5 billion years", "10 billion years"],
+        "correct": 1, "explanation": "Earth is approximately 4.5 billion years old, determined through radiometric dating of meteorites and the oldest known terrestrial rocks.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q6", "category": "properties",
+        "question": "A mineral that breaks along flat planes has good what?",
+        "options": ["Fracture", "Cleavage", "Tenacity", "Streak"],
+        "correct": 1, "explanation": "Cleavage is the tendency of minerals to break along flat planes of weakness in their crystal structure. Mica has perfect basal cleavage.",
+        "difficulty": "medium", "xp": 15
+    },
+    {
+        "id": "q7", "category": "real_or_rogue",
+        "question": "True or False: Obsidian is technically a glass, not a true mineral.",
+        "options": ["True", "False"],
+        "correct": 0, "explanation": "True! Obsidian is volcanic glass formed when lava cools too rapidly for crystal growth. Since it lacks a crystal structure, it's classified as a mineraloid.",
+        "difficulty": "medium", "xp": 15
+    },
+    {
+        "id": "q8", "category": "identification",
+        "question": "Which mineral effervesces (fizzes) when hydrochloric acid is applied?",
+        "options": ["Quartz", "Feldspar", "Calcite", "Pyrite"],
+        "correct": 2, "explanation": "Calcite (CaCO₃) reacts vigorously with HCl, producing CO₂ bubbles. This acid test is a classic field identification technique.",
+        "difficulty": "medium", "xp": 15
+    },
+    {
+        "id": "q9", "category": "geology",
+        "question": "What is the rock cycle?",
+        "options": [
+            "The rotation of rocks in a river",
+            "The continuous transformation between rock types",
+            "The lifecycle of volcanic eruptions",
+            "The annual flooding that deposits sediment"
+        ],
+        "correct": 1, "explanation": "The rock cycle describes the continuous transformation: igneous rocks weather into sediments, forming sedimentary rocks; heat and pressure create metamorphic rocks; and melting produces magma for new igneous rocks.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q10", "category": "real_or_rogue",
+        "question": "True or False: Rubies and sapphires are the same mineral (corundum) in different colors.",
+        "options": ["True", "False"],
+        "correct": 0, "explanation": "True! Both rubies and sapphires are varieties of corundum (Al₂O₃). Chromium impurities create the red color of rubies, while iron and titanium produce the blue of sapphires.",
+        "difficulty": "hard", "xp": 20
+    },
+    {
+        "id": "q11", "category": "properties",
+        "question": "What scale measures mineral hardness from 1-10?",
+        "options": ["Richter Scale", "Beaufort Scale", "Mohs Scale", "Rockwell Scale"],
+        "correct": 2, "explanation": "The Mohs scale of mineral hardness, created by Friedrich Mohs in 1812, ranks minerals from 1 (talc) to 10 (diamond) based on scratch resistance.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q12", "category": "identification",
+        "question": "What mineral is the main component of common table salt?",
+        "options": ["Quartz", "Halite", "Gypsum", "Calcite"],
+        "correct": 1, "explanation": "Halite (NaCl) is the mineral name for rock salt. It forms cubic crystals and is essential for human survival. Major deposits form from evaporated ancient seas.",
+        "difficulty": "easy", "xp": 10
+    },
+    {
+        "id": "q13", "category": "geology",
+        "question": "Which layer of the Earth is the thickest?",
+        "options": ["Crust", "Mantle", "Outer Core", "Inner Core"],
+        "correct": 1, "explanation": "The mantle is about 2,900 km thick, making up about 84% of Earth's volume. It's composed mainly of silicate minerals rich in iron and magnesium.",
+        "difficulty": "medium", "xp": 15
+    },
+    {
+        "id": "q14", "category": "real_or_rogue",
+        "question": "True or False: Some minerals are so rare they've only been found in one location on Earth.",
+        "options": ["True", "False"],
+        "correct": 0, "explanation": "True! Painite, once listed in the Guinness Book of Records as the rarest mineral, was found only in Myanmar. Thousands of minerals are known from very few localities.",
+        "difficulty": "hard", "xp": 20
+    },
+    {
+        "id": "q15", "category": "properties",
+        "question": "What is the streak of hematite?",
+        "options": ["Silver", "Black", "Red-brown", "White"],
+        "correct": 2, "explanation": "Despite its often metallic gray or black appearance, hematite always produces a distinctive red-brown streak, which is a key diagnostic feature.",
+        "difficulty": "hard", "xp": 20
+    },
+]
+
+CRYSTAL_SYSTEMS = [
+    {"system": "Cubic", "axes": "3 equal axes at 90°", "example": "Diamond, Pyrite, Halite, Garnet", "shape": "cube", "color": "#FFD700"},
+    {"system": "Tetragonal", "axes": "2 equal + 1 different, all at 90°", "example": "Zircon, Rutile", "shape": "prism", "color": "#00BCD4"},
+    {"system": "Orthorhombic", "axes": "3 different axes at 90°", "example": "Topaz, Olivine, Barite", "shape": "tablet", "color": "#4CAF50"},
+    {"system": "Hexagonal", "axes": "3 equal at 120° + 1 different", "example": "Quartz, Beryl, Apatite", "shape": "hexagon", "color": "#9C27B0"},
+    {"system": "Monoclinic", "axes": "3 different, 2 at 90° + 1 oblique", "example": "Gypsum, Orthoclase, Augite", "shape": "prism_tilted", "color": "#FF5722"},
+    {"system": "Triclinic", "axes": "3 different, none at 90°", "example": "Plagioclase, Kyanite", "shape": "irregular", "color": "#E91E63"},
+]
+
+@api_router.get("/lab/mohs-scale")
+async def get_mohs_scale():
+    """Get the Mohs hardness scale reference data"""
+    return {"scale": MOHS_SCALE}
+
+@api_router.get("/lab/luster-types")
+async def get_luster_types():
+    """Get luster type reference data"""
+    return {"types": LUSTER_TYPES}
+
+@api_router.get("/lab/crystal-systems")
+async def get_crystal_systems():
+    """Get crystal system reference data"""
+    return {"systems": CRYSTAL_SYSTEMS}
+
+@api_router.get("/lab/quiz")
+async def get_quiz_questions(count: int = 5, category: Optional[str] = None, difficulty: Optional[str] = None):
+    """Get random quiz questions"""
+    filtered = QUIZ_QUESTIONS.copy()
+    
+    if category:
+        filtered = [q for q in filtered if q["category"] == category]
+    if difficulty:
+        filtered = [q for q in filtered if q["difficulty"] == difficulty]
+    
+    selected = random.sample(filtered, min(count, len(filtered)))
+    return {"questions": selected, "total_available": len(QUIZ_QUESTIONS)}
+
+@api_router.post("/lab/quiz/submit")
+async def submit_quiz_answer(question_id: str, answer_index: int):
+    """Submit a quiz answer and earn XP"""
+    question = next((q for q in QUIZ_QUESTIONS if q["id"] == question_id), None)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    is_correct = answer_index == question["correct"]
+    xp_earned = question["xp"] if is_correct else 0
+    
+    if xp_earned > 0:
+        await update_user_stats("tests_performed", 1, xp_earned)
+    
+    return {
+        "correct": is_correct,
+        "correct_answer": question["correct"],
+        "explanation": question["explanation"],
+        "xp_earned": xp_earned
+    }
+
+@api_router.post("/lab/mohs-test")
+async def perform_mohs_test(specimen_id: Optional[str] = None, estimated_hardness: float = 5.0):
+    """Simulate performing a Mohs hardness test"""
+    # Find reference minerals above and below
+    lower = [m for m in MOHS_SCALE if m["value"] <= estimated_hardness]
+    upper = [m for m in MOHS_SCALE if m["value"] > estimated_hardness]
+    
+    result = {
+        "estimated_hardness": estimated_hardness,
+        "nearest_mineral": MOHS_SCALE[min(int(estimated_hardness) - 1, 9)],
+        "scratched_by": upper[0] if upper else None,
+        "scratches": lower[-1] if lower else None,
+        "common_objects": [],
+        "xp_earned": 10,
+    }
+    
+    # Add common object comparisons
+    if estimated_hardness <= 2.5:
+        result["common_objects"].append("Can be scratched by fingernail (2.5)")
+    if estimated_hardness <= 3.5:
+        result["common_objects"].append("Can be scratched by copper coin (3.5)")
+    if estimated_hardness <= 5.5:
+        result["common_objects"].append("Can be scratched by steel knife (5.5)")
+    if estimated_hardness <= 6.5:
+        result["common_objects"].append("Can be scratched by streak plate (6.5)")
+    if estimated_hardness >= 5.5:
+        result["common_objects"].append("Scratches glass (5.5)")
+    if estimated_hardness >= 7:
+        result["common_objects"].append("Scratches quartz (7)")
+    
+    # Award XP
+    await update_user_stats("tests_performed", 1, 10)
+    
+    return result
+
+@api_router.get("/lab/mineral-of-the-day")
+async def get_mineral_of_the_day():
+    """Get a featured mineral with fun facts"""
+    minerals = [
+        {
+            "name": "Quartz", "formula": "SiO₂", "hardness": 7, "system": "Hexagonal",
+            "fun_fact": "Quartz makes up about 12% of Earth's crust and comes in over 20 color varieties!",
+            "color": "#F5F5F5", "icon": "diamond", "rarity": "common"
+        },
+        {
+            "name": "Pyrite", "formula": "FeS₂", "hardness": 6.5, "system": "Cubic",
+            "fun_fact": "Pyrite creates sparks when struck against steel - it was used in early firearms as a spark source!",
+            "color": "#D4AF37", "icon": "flash", "rarity": "common"
+        },
+        {
+            "name": "Fluorite", "formula": "CaF₂", "hardness": 4, "system": "Cubic",
+            "fun_fact": "Fluorite often fluoresces under UV light - the word 'fluorescence' actually comes from fluorite!",
+            "color": "#00CED1", "icon": "color-palette", "rarity": "uncommon"
+        },
+        {
+            "name": "Malachite", "formula": "Cu₂CO₃(OH)₂", "hardness": 4, "system": "Monoclinic",
+            "fun_fact": "Ancient Egyptians used malachite as eye shadow! It's also been ground into pigment for thousands of years.",
+            "color": "#2E8B57", "icon": "eye", "rarity": "uncommon"
+        },
+        {
+            "name": "Labradorite", "formula": "(Ca,Na)(Al,Si)₄O₈", "hardness": 6.5, "system": "Triclinic",
+            "fun_fact": "Labradorite displays stunning iridescent flashes called 'labradorescence' - like trapped northern lights!",
+            "color": "#1A237E", "icon": "sparkles", "rarity": "rare"
+        },
+        {
+            "name": "Obsidian", "formula": "SiO₂ (amorphous)", "hardness": 5.5, "system": "None (glass)",
+            "fun_fact": "Obsidian can be flaked into blades sharper than surgical scalpels - down to 3 nanometers thick!",
+            "color": "#212121", "icon": "cut", "rarity": "uncommon"
+        },
+        {
+            "name": "Tourmaline", "formula": "Complex borosilicate", "hardness": 7.5, "system": "Hexagonal",
+            "fun_fact": "Watermelon tourmaline is pink inside and green outside, looking like a cross-section of watermelon!",
+            "color": "#E91E63", "icon": "prism", "rarity": "rare"
+        },
+    ]
+    
+    # Select based on day of year
+    day_index = datetime.now().timetuple().tm_yday % len(minerals)
+    mineral = minerals[day_index]
+    
+    return {"mineral": mineral}
+
 # Include the router in the main app
 app.include_router(api_router)
 

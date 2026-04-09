@@ -300,6 +300,82 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Active Expedition Quests */}
+        {leaderboard?.personalized && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Expedition</Text>
+              <Ionicons name="compass" size={20} color={colors.magmaAmber} />
+            </View>
+
+            {/* Daily Challenge */}
+            {leaderboard.personalized.next_challenge && (
+              <GlassPanel style={styles.questCard} variant="elevated">
+                <LinearGradient
+                  colors={['rgba(255,107,53,0.15)', 'rgba(139,92,246,0.1)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.questGradient}
+                >
+                  <View style={styles.questHeader}>
+                    <View style={styles.questIconBg}>
+                      <Ionicons name="flag" size={18} color={colors.magmaAmber} />
+                    </View>
+                    <View style={styles.questInfo}>
+                      <Text style={styles.questTitle}>{leaderboard.personalized.next_challenge.name}</Text>
+                      <Text style={styles.questDesc}>{leaderboard.personalized.next_challenge.description}</Text>
+                    </View>
+                    <View style={styles.questXP}>
+                      <Ionicons name="star" size={14} color={colors.specimenGold} />
+                      <Text style={styles.questXPText}>+{leaderboard.personalized.next_challenge.xp}</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </GlassPanel>
+            )}
+
+            {/* Daily Tip */}
+            <GlassPanel style={styles.tipCard} variant="subtle">
+              <View style={styles.tipHeader}>
+                <Ionicons name="bulb" size={18} color={colors.specimenGold} />
+                <Text style={styles.tipTitle}>Daily Insight</Text>
+              </View>
+              <Text style={styles.tipText}>{leaderboard.personalized.daily_tip}</Text>
+            </GlassPanel>
+
+            {/* Streak */}
+            <GlassPanel style={styles.streakCard} variant="subtle">
+              <Ionicons name="flame" size={24} color={colors.magmaAmber} />
+              <Text style={styles.streakMessage}>{leaderboard.personalized.streak_message}</Text>
+            </GlassPanel>
+          </View>
+        )}
+
+        {/* Quick Links */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { marginBottom: spacing.md }]}>Quick Access</Text>
+          <View style={styles.quickLinks}>
+            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/(tabs)/lab')}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: 'rgba(255,107,53,0.15)' }]}>
+                <Ionicons name="flask" size={22} color={colors.magmaAmber} />
+              </View>
+              <Text style={styles.quickLinkText}>Lab</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/(tabs)/notebook')}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: 'rgba(0,180,216,0.15)' }]}>
+                <Ionicons name="book" size={22} color={colors.crystalTeal} />
+              </View>
+              <Text style={styles.quickLinkText}>Notes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/subscription')}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: 'rgba(139,92,246,0.15)' }]}>
+                <Ionicons name="diamond" size={22} color={colors.amethystPurple} />
+              </View>
+              <Text style={styles.quickLinkText}>Plans</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* About GeoSnap */}
         <GlassPanel style={styles.aboutCard} variant="subtle">
           <View style={styles.aboutHeader}>
@@ -558,5 +634,115 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
     marginTop: spacing.sm,
+  },
+  // Quest cards
+  questCard: {
+    marginBottom: spacing.sm,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  questGradient: {
+    padding: spacing.md,
+  },
+  questHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  questIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,107,53,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  questInfo: {
+    flex: 1,
+  },
+  questTitle: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  questDesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  questXP: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(212,175,55,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  questXPText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.specimenGold,
+  },
+  // Tip card
+  tipCard: {
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  tipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  tipTitle: {
+    ...typography.bodySmall,
+    color: colors.specimenGold,
+    fontWeight: '600',
+  },
+  tipText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  // Streak card
+  streakCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  streakMessage: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  // Quick links
+  quickLinks: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  quickLink: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: colors.glassPanel,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    gap: spacing.sm,
+  },
+  quickLinkIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickLinkText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
 });

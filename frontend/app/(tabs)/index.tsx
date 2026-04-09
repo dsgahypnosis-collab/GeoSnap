@@ -1,6 +1,6 @@
 // Home/Discover Screen - The Gateway to Geological Discovery
 // With AI-Personalized Content that constantly updates for each user
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -32,9 +33,18 @@ export default function HomeScreen() {
   } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [personalized, setPersonalized] = useState<PersonalizedContent | null>(null);
+  const [mineralOfDay, setMineralOfDay] = useState<any>(null);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadData();
+    // Start shimmer animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
 
   const loadData = async () => {
@@ -52,6 +62,14 @@ export default function HomeScreen() {
       }
     } catch (e) {
       console.log('Failed to load personalized content:', e);
+    }
+
+    // Get mineral of the day
+    try {
+      const mot = await api.getMineralOfTheDay();
+      setMineralOfDay(mot.mineral);
+    } catch (e) {
+      console.log('Failed to load mineral of day:', e);
     }
   };
 
@@ -194,6 +212,70 @@ export default function HomeScreen() {
             </GlassPanel>
           </View>
         )}
+
+        {/* Mineral of the Day */}
+        {mineralOfDay && (
+          <TouchableOpacity 
+            style={styles.mineralDayBanner}
+            onPress={() => router.push('/(tabs)/lab')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[mineralOfDay.color || colors.amethystPurple, colors.caveShadow]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.mineralDayGradient}
+            >
+              <View style={styles.mineralDayLeft}>
+                <Text style={styles.mineralDayLabel}>MINERAL OF THE DAY</Text>
+                <Text style={styles.mineralDayName}>{mineralOfDay.name}</Text>
+                <Text style={styles.mineralDayFormula}>{mineralOfDay.formula}</Text>
+              </View>
+              <View style={styles.mineralDayRight}>
+                <Ionicons name={(mineralOfDay.icon || 'diamond') as any} size={40} color="rgba(255,255,255,0.6)" />
+                <View style={styles.mineralDayHardnessBadge}>
+                  <Text style={styles.mineralDayHardnessText}>H: {mineralOfDay.hardness}</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {/* Lab & Quiz Quick Access */}
+        <View style={styles.labQuickRow}>
+          <TouchableOpacity
+            style={styles.labQuickCard}
+            onPress={() => router.push('/(tabs)/lab')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[colors.amethystPurple, '#6C3FCE']}
+              style={styles.labQuickGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="flask" size={24} color="#FFF" />
+              <Text style={styles.labQuickTitle}>Geo Lab</Text>
+              <Text style={styles.labQuickSub}>5 tools</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.labQuickCard}
+            onPress={() => router.push('/(tabs)/lab')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[colors.crystalTeal, '#0090B0']}
+              style={styles.labQuickGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="help-circle" size={24} color="#FFF" />
+              <Text style={styles.labQuickTitle}>Rock Quiz</Text>
+              <Text style={styles.labQuickSub}>Earn XP</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
         {/* Go Pro Banner - Monetization */}
         <TouchableOpacity 
@@ -636,5 +718,81 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
+  },
+  // Mineral of the Day
+  mineralDayBanner: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    ...shadows.md,
+  },
+  mineralDayGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    minHeight: 100,
+  },
+  mineralDayLeft: {
+    flex: 1,
+  },
+  mineralDayLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.5)',
+    marginBottom: 4,
+  },
+  mineralDayName: {
+    ...typography.h2,
+    color: '#FFF',
+  },
+  mineralDayFormula: {
+    ...typography.bodySmall,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 2,
+  },
+  mineralDayRight: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  mineralDayHardnessBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
+  },
+  mineralDayHardnessText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  // Lab Quick Access
+  labQuickRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  labQuickCard: {
+    flex: 1,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  labQuickGrad: {
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 85,
+    gap: 4,
+  },
+  labQuickTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  labQuickSub: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.65)',
   },
 });

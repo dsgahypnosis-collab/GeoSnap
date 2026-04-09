@@ -52,11 +52,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="notebook"
+        name="lab"
         options={{
-          title: 'Field',
+          title: 'Lab',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
+            <Ionicons name="flask" size={size} color={color} />
           ),
         }}
       />
@@ -67,6 +67,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="notebook"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
